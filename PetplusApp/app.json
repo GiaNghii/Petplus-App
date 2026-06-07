@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Petplus",
+    "slug": "PetplusApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2E7D32"
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyByXeEwZcMWcq9KcqYHXMZhOFmkLpVifr4",
+      "firebaseAuthDomain": "petplus-af32a.firebaseapp.com",
+      "firebaseProjectId": "petplus-af32a",
+      "firebaseStorageBucket": "petplus-af32a.firebasestorage.app",
+      "firebaseMessagingSenderId": "483533409468",
+      "firebaseAppId": "1:483533409468:web:98ae0ddee2fde6265c14b9"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.petplus.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2E7D32",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.petplus.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -1,0 +1,259 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { theme } from '../../utils/theme';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import Card from '../../components/Card';
+
+const DOCTORS = [
+  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', rating: 4.9, reviews: 128, patients: 2 },
+  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', rating: 4.8, reviews: 96, patients: 1 },
+  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', rating: 4.7, reviews: 64, patients: 3 },
+];
+
+export default function SelectDoctorScreen({ route, navigation }: any) {
+  const { branchId } = route.params;
+  const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
+  const [autoAssign, setAutoAssign] = useState(false);
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Header
+        title="Chọn bác sĩ"
+        subtitle="Bước 2 / 4"
+        onBack={() => navigation.goBack()}
+      />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.stepText}>Bước 2 / 4</Text>
+          <Text style={styles.title}>Chọn bác sĩ phù hợp</Text>
+          <Text style={styles.subtitle}>Có thể để hệ thống tự động gán bác sĩ khả dụng</Text>
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            setAutoAssign(!autoAssign);
+            setSelectedDoctor(null);
+          }}
+        >
+          <Card style={[
+            styles.autoAssignCard,
+            autoAssign && styles.autoAssignCardSelected,
+          ]}>
+            <View style={styles.autoAssignIcon}>
+              <Text style={{ fontSize: 24 }}>🔄</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.autoAssignTitle}>Tự động gán bác sĩ</Text>
+              <Text style={styles.autoAssignDesc}>Hệ thống chọn bác sĩ available đầu tiên</Text>
+            </View>
+            {autoAssign && (
+              <View style={styles.checkmark}>
+                <Text style={styles.checkmarkText}>✓</Text>
+              </View>
+            )}
+          </Card>
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Hoặc chọn bác sĩ cụ thể:</Text>
+
+        {DOCTORS.map((doctor) => (
+          <TouchableOpacity
+            key={doctor.id}
+            activeOpacity={0.8}
+            onPress={() => {
+              setSelectedDoctor(doctor.id);
+              setAutoAssign(false);
+            }}
+          >
+            <Card style={[
+              styles.doctorCard,
+              selectedDoctor === doctor.id && styles.doctorCardSelected,
+            ]}>
+              <View style={styles.doctorAvatar}>
+                <Text style={styles.doctorEmoji}>👨‍⚕️</Text>
+              </View>
+              <View style={styles.doctorInfo}>
+                <Text style={styles.doctorName}>{doctor.name}</Text>
+                <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
+                <View style={styles.doctorMeta}>
+                  <Text style={styles.doctorRating}>⭐ {doctor.rating}</Text>
+                  <Text style={styles.metaText}>({doctor.reviews} đánh giá)</Text>
+                </View>
+                <View style={styles.doctorMeta}>
+                  <Text style={styles.metaEmoji}>📅</Text>
+                  <Text style={styles.metaText}>
+                    {doctor.patients}/3 bệnh nhân hôm nay
+                  </Text>
+                </View>
+              </View>
+              {selectedDoctor === doctor.id && (
+                <View style={styles.checkmark}>
+                  <Text style={styles.checkmarkText}>✓</Text>
+                </View>
+              )}
+            </Card>
+          </TouchableOpacity>
+        ))}
+
+        <View style={styles.footer}>
+          <Button
+            title="Tiếp tục"
+            onPress={() => {
+              if (selectedDoctor || autoAssign) {
+                navigation.navigate('SelectTimeSlot', { 
+                  branchId, 
+                  doctorId: selectedDoctor || 'auto' 
+                });
+              }
+            }}
+            disabled={!selectedDoctor && !autoAssign}
+            fullWidth
+            size="lg"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  content: {
+    padding: theme.spacing.xl,
+    paddingBottom: 100,
+  },
+  headerInfo: {
+    marginBottom: theme.spacing.xl,
+  },
+  stepText: {
+    ...theme.typography.smallBold,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  title: {
+    ...theme.typography.h2,
+    color: theme.colors.textPrimary,
+  },
+  subtitle: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+  },
+  autoAssignCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  autoAssignCardSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryBg,
+  },
+  autoAssignIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.warningBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  autoAssignTitle: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.textPrimary,
+  },
+  autoAssignDesc: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  sectionTitle: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+  },
+  doctorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  doctorCardSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primaryBg,
+  },
+  doctorAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.primaryBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  doctorEmoji: {
+    fontSize: 32,
+  },
+  doctorInfo: {
+    flex: 1,
+  },
+  doctorName: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.textPrimary,
+  },
+  doctorSpecialty: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  doctorMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  doctorRating: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.warning,
+  },
+  metaEmoji: {
+    fontSize: 11,
+  },
+  metaText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  checkmark: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkText: {
+    color: theme.colors.textOnPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+  },
+});
