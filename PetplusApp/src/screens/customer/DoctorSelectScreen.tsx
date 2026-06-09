@@ -5,6 +5,7 @@ import { petService } from '../../services/firestoreService';
 import { Pet } from '../../types';
 import { theme } from '../../utils/theme';
 import { useAuth } from '../../context/AuthContext';
+import Icon from '../../components/Icon';
 
 const DOCTORS = [
   { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', rating: 4.9, status: 'online' },
@@ -33,9 +34,8 @@ export default function DoctorSelectScreen({ navigation }: any) {
     }
   };
 
-  // Sort: online first, then busy, then offline
   const sortedDoctors = [...DOCTORS].sort((a, b) => {
-    const order = { online: 0, busy: 1, offline: 2 };
+    const order: Record<string, number> = { online: 0, busy: 1, offline: 2 };
     return order[a.status] - order[b.status];
   });
 
@@ -83,10 +83,18 @@ export default function DoctorSelectScreen({ navigation }: any) {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'online': return '🟢 Online';
-      case 'busy': return '🟡 Đang khám';
-      case 'offline': return '⚪ Offline';
+      case 'online': return 'Online';
+      case 'busy': return 'Đang khám';
+      case 'offline': return 'Offline';
       default: return status;
+    }
+  };
+
+  const getPetIcon = (species: string): import('../../components/Icon').IconName => {
+    switch (species) {
+      case 'dog': return 'paw';
+      case 'cat': return 'paw';
+      default: return 'paw';
     }
   };
 
@@ -96,7 +104,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>💬 Tư vấn</Text>
+        <Text style={styles.greeting}>Tư vấn</Text>
         <Text style={styles.subtitle}>Chọn bác sĩ để bắt đầu tư vấn</Text>
       </View>
 
@@ -114,9 +122,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
               ]}
               onPress={() => setSelectedPetId(item.id)}
             >
-              <Text style={styles.petChipEmoji}>
-                {item.species === 'dog' ? '🐕' : item.species === 'cat' ? '🐈' : '🐾'}
-              </Text>
+              <Icon name={getPetIcon(item.species)} size={16} color={selectedPetId === item.id ? theme.colors.primaryDarker : theme.colors.textSecondary} />
               <Text style={[
                 styles.petChipText,
                 selectedPetId === item.id && styles.petChipTextSelected,
@@ -144,15 +150,17 @@ export default function DoctorSelectScreen({ navigation }: any) {
               styles.doctorAvatar,
               { borderColor: getStatusColor(item.status) },
             ]}>
-              <Text style={{ fontSize: 28 }}>👨‍⚕️</Text>
+              <Icon name="medical" size={28} color={theme.colors.primary} />
               <View style={[styles.onlineDot, { backgroundColor: getStatusColor(item.status) }]} />
             </View>
             <View style={styles.doctorInfo}>
               <Text style={styles.doctorName}>{item.name}</Text>
               <Text style={styles.doctorSpecialty}>{item.specialty}</Text>
               <View style={styles.doctorMeta}>
-                <Text style={styles.doctorRating}>⭐ {item.rating}</Text>
+                <Icon name="star" size={12} color={theme.colors.warning} />
+                <Text style={styles.doctorRating}>{item.rating}</Text>
                 <View style={styles.metaDot} />
+                <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
                 <Text style={[styles.statusBadgeText, { color: getStatusColor(item.status) }]}>
                   {getStatusText(item.status)}
                 </Text>
@@ -212,7 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
     gap: 6,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -220,9 +228,6 @@ const styles = StyleSheet.create({
   petChipSelected: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryBg,
-  },
-  petChipEmoji: {
-    fontSize: 16,
   },
   petChipText: {
     fontSize: 13,
@@ -295,6 +300,11 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: theme.colors.textTertiary,
   },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '500',
@@ -303,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   chatButtonText: {
     color: theme.colors.textOnPrimary,

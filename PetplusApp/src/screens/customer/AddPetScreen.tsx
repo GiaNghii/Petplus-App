@@ -7,12 +7,13 @@ import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 
-const SPECIES = [
-  { id: 'dog', label: 'Chó', emoji: '🐕', color: theme.colors.dog },
-  { id: 'cat', label: 'Mèo', emoji: '🐈', color: theme.colors.cat },
-  { id: 'other', label: 'Khác', emoji: '🐾', color: theme.colors.other },
+const SPECIES: { id: string; label: string; icon: import('../../components/Icon').IconName; color: string }[] = [
+  { id: 'dog', label: 'Chó', icon: 'paw', color: theme.colors.dog },
+  { id: 'cat', label: 'Mèo', icon: 'paw-outline', color: theme.colors.cat },
+  { id: 'other', label: 'Khác', icon: 'paw', color: theme.colors.other },
 ];
 
 export default function AddPetScreen({ navigation }: any) {
@@ -52,7 +53,7 @@ export default function AddPetScreen({ navigation }: any) {
         navigation.goBack();
       }, 1500);
     } else {
-      Alert.alert('Lỗi', result.error || 'Không thể thêm thú cưng');
+      Alert.alert('Lỗi', 'Không thể thêm thú cưng');
     }
   };
 
@@ -66,13 +67,11 @@ export default function AddPetScreen({ navigation }: any) {
         <View style={styles.content}>
           {/* Avatar Preview */}
           <View style={styles.avatarPreview}>
-            <Text style={styles.avatarEmoji}>
-              {SPECIES.find(s => s.id === species)?.emoji}
-            </Text>
+            <Icon name={SPECIES.find(s => s.id === species)?.icon || 'paw'} size={80} color={theme.colors.primary} />
             <Text style={styles.avatarName}>{name || 'Tên thú cưng'}</Text>
           </View>
 
-          <Card style={styles.formCard}>
+          <ModernCard style={styles.formCard}>
             <Text style={styles.sectionLabel}>Thông tin cơ bản</Text>
             
             <Input
@@ -96,7 +95,7 @@ export default function AddPetScreen({ navigation }: any) {
                   ]}
                   onPress={() => setSpecies(s.id)}
                 >
-                  <Text style={styles.speciesEmoji}>{s.emoji}</Text>
+                  <Icon name={s.icon} size={32} color={species === s.id ? s.color : theme.colors.textSecondary} style={{ marginBottom: 4 }} />
                   <Text style={[
                     styles.speciesLabel,
                     species === s.id && { color: s.color, fontWeight: '600' }
@@ -128,9 +127,9 @@ export default function AddPetScreen({ navigation }: any) {
               value={birthDate}
               onChangeText={setBirthDate}
             />
-          </Card>
+          </ModernCard>
 
-          <Card style={styles.formCard}>
+          <ModernCard style={styles.formCard}>
             <Text style={styles.sectionLabel}>Thông tin y tế</Text>
             
             <Input
@@ -151,12 +150,12 @@ export default function AddPetScreen({ navigation }: any) {
             />
 
             <View style={styles.infoBox}>
-              <Text style={styles.infoIcon}>💡</Text>
+              <Icon name="information-circle" size={16} color={theme.colors.primary} style={{ marginTop: 2 }} />
               <Text style={styles.infoText}>
                 Thông tin y tế giúp bác sĩ chẩn đoán chính xác và tránh kê đơn thuốc gây dị ứng.
               </Text>
             </View>
-          </Card>
+          </ModernCard>
 
           <Button
             title={loading ? 'Đang lưu...' : 'Lưu thú cưng'}
@@ -178,7 +177,7 @@ export default function AddPetScreen({ navigation }: any) {
       >
         <View style={styles.notificationOverlay}>
           <View style={styles.notificationCard}>
-            <Text style={styles.notificationIcon}>✅</Text>
+            <Icon name="checkmark" size={24} color={theme.colors.success} />
             <Text style={styles.notificationText}>Đã thêm {name} vào danh sách!</Text>
           </View>
         </View>
@@ -199,13 +198,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: theme.spacing.lg,
   },
-  avatarEmoji: {
-    fontSize: 80,
-    marginBottom: theme.spacing.sm,
-  },
   avatarName: {
     ...theme.typography.h3,
     color: theme.colors.textPrimary,
+    marginTop: theme.spacing.sm,
   },
   formCard: {
     marginBottom: theme.spacing.lg,
@@ -235,10 +231,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  speciesEmoji: {
-    fontSize: 32,
-    marginBottom: 4,
-  },
   speciesLabel: {
     fontSize: 13,
     color: theme.colors.textPrimary,
@@ -250,9 +242,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
-  },
-  infoIcon: {
-    fontSize: 16,
   },
   infoText: {
     flex: 1,
@@ -269,11 +258,11 @@ const styles = StyleSheet.create({
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.lg,
     borderRadius: theme.radius.lg,
     gap: theme.spacing.md,
-    shadowColor: '#000',
+    shadowColor: theme.colors.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -281,9 +270,6 @@ const styles = StyleSheet.create({
     minWidth: 280,
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.success,
-  },
-  notificationIcon: {
-    fontSize: 24,
   },
   notificationText: {
     ...theme.typography.bodyBold,

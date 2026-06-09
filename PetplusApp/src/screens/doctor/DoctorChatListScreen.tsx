@@ -3,12 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
+import Icon from '../../components/Icon';
 
 const CHATS = [
   {
     id: '1',
     pet: 'Buddy',
-    petEmoji: '🐕',
     customer: 'Nguyễn Văn C',
     status: 'waiting',
     lastMessage: 'Khách hàng đang nhập tin nhắn...',
@@ -19,7 +19,6 @@ const CHATS = [
   {
     id: '2',
     pet: 'Mèo',
-    petEmoji: '🐈',
     customer: 'Trần Thị D',
     status: 'active',
     lastMessage: 'Mèo em bỏ ăn 2 ngày rồi...',
@@ -30,7 +29,6 @@ const CHATS = [
   {
     id: '3',
     pet: 'Brown',
-    petEmoji: '🐕',
     customer: 'Lê Văn E',
     status: 'active',
     lastMessage: 'Cảm ơn bác sĩ ạ!',
@@ -41,7 +39,6 @@ const CHATS = [
   {
     id: '4',
     pet: 'Mèo Mun',
-    petEmoji: '🐈',
     customer: 'Phạm Thị F',
     status: 'waiting',
     lastMessage: '[Hình ảnh]',
@@ -62,7 +59,7 @@ export default function DoctorChatListScreen({ navigation }: any) {
       })}
     >
       <View style={styles.petAvatar}>
-        <Text style={styles.petEmoji}>{item.petEmoji}</Text>
+        <Icon name="paw" size={24} color={theme.colors.warning} />
         {item.unread && <View style={styles.unreadDot} />}
       </View>
       <View style={styles.chatInfo}>
@@ -70,9 +67,12 @@ export default function DoctorChatListScreen({ navigation }: any) {
           <Text style={styles.customer}>{item.customer}</Text>
           <Text style={styles.time}>{item.time}</Text>
         </View>
-        <Text style={styles.petInfo}>
-          {item.petEmoji} {item.pet} - {item.breed}
-        </Text>
+        <View style={styles.petInfoRow}>
+          <Icon name="paw" size={12} color={theme.colors.textSecondary} />
+          <Text style={styles.petInfo}>
+            {item.pet} - {item.breed}
+          </Text>
+        </View>
         <Text style={styles.lastMessage} numberOfLines={1}>
           {item.lastMessage}
         </Text>
@@ -82,12 +82,13 @@ export default function DoctorChatListScreen({ navigation }: any) {
             { backgroundColor: item.status === 'waiting' ? theme.colors.warning : theme.colors.primary }
           ]}>
             <Text style={styles.statusText}>
-              {item.status === 'waiting' ? '⏳ Chờ tư vấn' : '💬 Đang chat'}
+              {item.status === 'waiting' ? 'Chờ tư vấn' : 'Đang chat'}
             </Text>
           </View>
           {item.status === 'waiting' && (
             <TouchableOpacity style={styles.acceptButton}>
-              <Text style={styles.acceptButtonText}>Nhận tư vấn →</Text>
+              <Text style={styles.acceptButtonText}>Nhận tư vấn</Text>
+              <Icon name="arrow-forward" size={12} color={theme.colors.textOnPrimary} />
             </TouchableOpacity>
           )}
         </View>
@@ -140,9 +141,6 @@ const styles = StyleSheet.create({
     marginRight: theme.spacing.md,
     position: 'relative',
   },
-  petEmoji: {
-    fontSize: 32,
-  },
   unreadDot: {
     position: 'absolute',
     top: 0,
@@ -169,10 +167,15 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
   },
+  petInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
   petInfo: {
     fontSize: 12,
     color: theme.colors.textSecondary,
-    marginBottom: 4,
   },
   lastMessage: {
     ...theme.typography.small,
@@ -199,6 +202,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 4,
     borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   acceptButtonText: {
     color: theme.colors.textOnPrimary,

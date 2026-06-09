@@ -1,30 +1,53 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
-import { theme, commonStyles } from '../utils/theme';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, Animated, ActivityIndicator } from 'react-native';
+import { theme } from '../utils/theme';
+import Icon, { IconName } from './Icon';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
-  icon?: string;
+  icon?: IconName;
   disabled?: boolean;
+  loading?: boolean;
   style?: ViewStyle;
   fullWidth?: boolean;
 }
 
-export default function Button({ 
-  title, 
-  onPress, 
-  variant = 'primary', 
+export default function Button({
+  title,
+  onPress,
+  variant = 'primary',
   size = 'md',
   icon,
   disabled = false,
+  loading = false,
   style,
   fullWidth = false,
 }: ButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 300,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 300,
+    }).start();
+  };
+
   const getBackgroundColor = () => {
-    if (disabled) return theme.colors.borderLight;
+    if (disabled || loading) return theme.colors.borderLight;
     switch (variant) {
       case 'primary': return theme.colors.primary;
       case 'secondary': return theme.colors.primaryBg;
@@ -36,7 +59,7 @@ export default function Button({
   };
 
   const getTextColor = () => {
-    if (disabled) return theme.colors.textDisabled;
+    if (disabled || loading) return theme.colors.textDisabled;
     switch (variant) {
       case 'primary': return theme.colors.textOnPrimary;
       case 'secondary': return theme.colors.primaryDarker;
@@ -49,38 +72,62 @@ export default function Button({
 
   const getPadding = () => {
     switch (size) {
-      case 'sm': return { paddingVertical: 8, paddingHorizontal: 16 };
+      case 'sm': return { paddingVertical: 10, paddingHorizontal: 18 };
       case 'md': return { paddingVertical: 14, paddingHorizontal: 24 };
-      case 'lg': return { paddingVertical: 18, paddingHorizontal: 28 };
+      case 'lg': return { paddingVertical: 18, paddingHorizontal: 32 };
     }
   };
 
+  const getFontSize = () => {
+    switch (size) {
+      case 'sm': return 14;
+      case 'md': return 16;
+      case 'lg': return 18;
+    }
+  };
+
+  const isPill = variant === 'primary' || variant === 'danger';
+
   return (
-    <TouchableOpacity
+    <Animated.View
       style={[
-        styles.button,
-        getPadding(),
-        { 
-          backgroundColor: getBackgroundColor(),
-          borderWidth: variant === 'outline' ? 1.5 : 0,
-          borderColor: theme.colors.primary,
-          width: fullWidth ? '100%' : 'auto',
-          opacity: disabled ? 0.6 : 1,
-        },
-        style,
+        { transform: [{ scale: scaleAnim }], width: fullWidth ? '100%' : 'auto' },
       ]}
-      onPress={onPress}
-      disabled={disabled}
-      activeOpacity={0.8}
     >
-      {icon && <Text style={styles.icon}>{icon}</Text>}
-      <Text style={[
-        commonStyles.button.text,
-        { color: getTextColor(), fontSize: size === 'sm' ? 14 : 16 }
-      ]}>
-        {title}
-      </Text>
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={[
+          styles.button,
+          getPadding(),
+          {
+            backgroundColor: getBackgroundColor(),
+            borderWidth: variant === 'outline' ? 1.5 : 0,
+            borderColor: variant === 'outline' ? theme.colors.primary : 'transparent',
+            borderRadius: isPill ? theme.radius.pill : theme.radius.lg,
+            opacity: disabled ? 0.6 : 1,
+          },
+          style,
+        ]}
+        onPress={onPress}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {loading ? (
+          <ActivityIndicator color={getTextColor()} size="small" />
+        ) : (
+          <>
+            {icon && <Icon name={icon} size={getFontSize() + 4} color={getTextColor()} style={{ marginRight: 8 }} />}
+            <Text style={[
+              styles.text,
+              { color: getTextColor(), fontSize: getFontSize() }
+            ]}>
+              {title}
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -89,10 +136,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.radius.md,
     gap: theme.spacing.sm,
   },
-  icon: {
-    fontSize: 18,
+  text: {
+    fontWeight: '600',
   },
 });

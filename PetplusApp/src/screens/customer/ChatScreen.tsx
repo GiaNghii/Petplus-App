@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Keyboard
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
+import Icon from '../../components/Icon';
 import { useCart } from '../../context/CartContext';
 
 interface Message {
@@ -15,7 +16,7 @@ interface Message {
 
 const AUTO_REPLIES = [
   'Dạ em hiểu rồi ạ. Chị có thể mô tả thêm triệu chứng không?',
-  'Em sẽ kiểm tra lại hồ sơ của pet. Chị vui lòng chờ片刻 nhé.',
+  'Em sẽ kiểm tra lại hồ sơ của pet. Chị vui lòng chờ nhé.',
   'Theo em thấy thì tình trạng này khá phổ biến. Em sẽ kê đơn thuốc phù hợp.',
   'Chị nhớ cho pet uống thuốc đúng giờ nhé. Nếu có gì bất thường thì nhắn em ngay.',
   'Em đã ghi nhận thông tin. Chị yên tâm, tình trạng này sẽ cải thiện sau vài ngày.',
@@ -72,7 +73,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
   const handleBuyProduct = (product: { name: string; price: number }) => {
     Alert.alert(
-      '⚠️ Thuốc kê đơn',
+      'Thuốc kê đơn',
       'Đảm bảo thuốc này được sử dụng cho đúng thú cưng được kê đơn, không sử dụng cho các thú cưng khác để tránh các trường hợp xấu có thể xảy ra.',
       [
         { text: 'Hủy', style: 'cancel' },
@@ -86,15 +87,9 @@ export default function ChatScreen({ route, navigation }: any) {
               type: 'prescription',
               category: 'thuoc',
               description: '',
-              imageEmoji: '💊',
-              bgColor: '#E8F5E9',
               stock: 10,
-              rating: 4.8,
-              reviews: 50,
-              sold: 100,
-              unit: 'hộp',
             });
-            Alert.alert('✓ Đã thêm vào giỏ', `${product.name} đã được thêm vào giỏ hàng`);
+            Alert.alert('Đã thêm vào giỏ', `${product.name} đã được thêm vào giỏ hàng`);
           },
         },
       ]
@@ -121,13 +116,13 @@ export default function ChatScreen({ route, navigation }: any) {
             style={styles.productCard}
             onPress={() => handleBuyProduct(item.productLink!)}
           >
-            <Text style={styles.productEmoji}></Text>
+            <Icon name="medkit" size={32} color={theme.colors.primary} />
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{item.productLink.name}</Text>
               <Text style={styles.productPrice}>
                 {item.productLink.price.toLocaleString('vi-VN')}đ
               </Text>
-              <Text style={styles.buyText}>🛒 Nhấn để mua</Text>
+              <Text style={styles.buyText}>Nhấn để mua</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -141,8 +136,8 @@ export default function ChatScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header
-        title={`👨‍️ ${doctorName}`}
-        subtitle={` ${petName}`}
+        title={doctorName}
+        subtitle={petName}
         onBack={() => navigation.goBack()}
         variant="primary"
       />
@@ -163,7 +158,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
         <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.attachButton}>
-            <Text style={styles.attachIcon}></Text>
+            <Icon name="attach" size={24} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             style={styles.input}
@@ -177,7 +172,7 @@ export default function ChatScreen({ route, navigation }: any) {
             onPress={sendMessage}
             disabled={!inputText.trim()}
           >
-            <Text style={styles.sendIcon}>➤</Text>
+            <Icon name="send" size={18} color={theme.colors.textOnPrimary} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -241,10 +236,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  productEmoji: {
-    fontSize: 32,
-    marginRight: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   productInfo: {
     flex: 1,
@@ -277,13 +269,10 @@ const styles = StyleSheet.create({
   attachButton: {
     padding: theme.spacing.sm,
   },
-  attachIcon: {
-    fontSize: 24,
-  },
   input: {
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 20,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     fontSize: 16,
@@ -293,16 +282,12 @@ const styles = StyleSheet.create({
   sendButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sendButtonDisabled: {
     backgroundColor: theme.colors.border,
-  },
-  sendIcon: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 18,
   },
 });

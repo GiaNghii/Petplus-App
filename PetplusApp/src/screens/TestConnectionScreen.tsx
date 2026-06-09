@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { testFirebaseConnection } from '../utils/testConnection';
+import { theme } from '../utils/theme';
+import Icon from '../components/Icon';
+import Button from '../components/Button';
+import ModernCard from '../components/ModernCard';
 
 export default function TestConnectionScreen() {
   const [result, setResult] = useState<any>(null);
@@ -14,39 +18,50 @@ export default function TestConnectionScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>🔍 Kiểm tra kết nối Firebase</Text>
-      
-      <TouchableOpacity 
-        style={styles.button}
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.titleRow}>
+        <Icon name="search" size={24} color={theme.colors.primary} />
+        <Text style={styles.title}>Kiểm tra kết nối Firebase</Text>
+      </View>
+
+      <Button
+        title={loading ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
         onPress={runTest}
+        loading={loading}
         disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
-        </Text>
-      </TouchableOpacity>
+        fullWidth
+      />
 
       {result && (
-        <View style={styles.result}>
+        <ModernCard style={styles.resultCard} padding="lg">
           <Text style={styles.resultTitle}>Kết quả:</Text>
-          <Text style={styles.resultText}>
-            {result.success ? '✅ Thành công!' : '❌ Thất bại'}
-          </Text>
+          <View style={styles.resultRow}>
+            {result.success ? (
+              <>
+                <Icon name="checkmark" size={20} color={theme.colors.primary} />
+                <Text style={styles.resultSuccess}>Thành công!</Text>
+              </>
+            ) : (
+              <>
+                <Icon name="close" size={20} color={theme.colors.danger} />
+                <Text style={styles.resultFail}>Thất bại</Text>
+              </>
+            )}
+          </View>
           {result.error && (
-            <Text style={styles.error}>Lỗi: {result.error}</Text>
+            <Text style={styles.errorText}>Lỗi: {result.error}</Text>
           )}
           {result.userId && (
-            <Text style={styles.success}>User ID: {result.userId}</Text>
+            <Text style={styles.successText}>User ID: {result.userId}</Text>
           )}
-        </View>
+        </ModernCard>
       )}
 
-      <View style={styles.info}>
+      <ModernCard style={styles.infoCard} variant="accent" padding="lg">
         <Text style={styles.infoTitle}>Thông tin kết nối:</Text>
         <Text style={styles.infoText}>Project: petplus-af32a</Text>
         <Text style={styles.infoText}>Auth Domain: petplus-af32a.firebaseapp.com</Text>
-      </View>
+      </ModernCard>
     </ScrollView>
   );
 }
@@ -54,64 +69,69 @@ export default function TestConnectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  content: {
     padding: 20,
     paddingTop: 60,
-    backgroundColor: '#fff',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#2E7D32',
+    color: theme.colors.primary,
   },
-  button: {
-    backgroundColor: '#2E7D32',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  result: {
-    backgroundColor: '#F5F5F5',
-    padding: 16,
-    borderRadius: 12,
+  resultCard: {
+    marginTop: 20,
     marginBottom: 20,
   },
   resultTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: theme.colors.textPrimary,
   },
-  resultText: {
-    fontSize: 16,
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
-  error: {
-    color: '#D32F2F',
-    fontSize: 14,
+  resultSuccess: {
+    fontSize: 16,
+    color: theme.colors.primary,
   },
-  success: {
-    color: '#1B5E20',
-    fontSize: 14,
+  resultFail: {
+    fontSize: 16,
+    color: theme.colors.danger,
   },
-  info: {
-    backgroundColor: '#FFF3E0',
-    padding: 16,
-    borderRadius: 12,
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  successText: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  infoCard: {
+    marginTop: 20,
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: theme.colors.textPrimary,
   },
   infoText: {
     fontSize: 14,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
 });

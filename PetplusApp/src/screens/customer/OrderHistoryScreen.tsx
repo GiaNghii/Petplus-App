@@ -6,6 +6,7 @@ import { orderService } from '../../services/firestoreService';
 import { Order } from '../../types';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
+import Icon from '../../components/Icon';
 
 export default function OrderHistoryScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -36,11 +37,11 @@ export default function OrderHistoryScreen({ navigation }: any) {
 
   const getStatusInfo = (status: string) => {
     const map: Record<string, { label: string; color: string; progress: number }> = {
-      pending: { label: 'Chờ xử lý', color: '#F57C00', progress: 25 },
-      preparing: { label: 'Đang chuẩn bị', color: '#1976D2', progress: 50 },
-      shipped: { label: 'Đang giao', color: '#7B1FA2', progress: 75 },
-      delivered: { label: 'Đã giao', color: '#2E7D32', progress: 100 },
-      cancelled: { label: 'Đã hủy', color: '#D32F2F', progress: 0 },
+      pending: { label: 'Chờ xử lý', color: theme.colors.warning, progress: 25 },
+      preparing: { label: 'Đang chuẩn bị', color: theme.colors.info, progress: 50 },
+      shipped: { label: 'Đang giao', color: theme.colors.secondary, progress: 75 },
+      delivered: { label: 'Đã giao', color: theme.colors.success, progress: 100 },
+      cancelled: { label: 'Đã hủy', color: theme.colors.danger, progress: 0 },
     };
     return map[status] || map.pending;
   };
@@ -59,7 +60,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
         <View style={styles.orderItems}>
           {item.items?.slice(0, 2).map((orderItem, index) => (
             <View key={index} style={styles.orderItem}>
-              <Text style={styles.itemEmoji}>💊</Text>
+              <Icon name="medkit" size={20} color={theme.colors.primary} />
               <Text style={styles.itemText} numberOfLines={1}>
                 {orderItem.quantity}x Thuốc #{orderItem.productId?.slice(-4)}
               </Text>
@@ -89,8 +90,8 @@ export default function OrderHistoryScreen({ navigation }: any) {
           <View>
             <Text style={styles.footerLabel}>Thanh toán</Text>
             <Text style={styles.paymentMethod}>
-              {item.paymentMethod === 'COD' ? '💵 COD' : 
-               item.paymentMethod === 'momo' ? '💳 Momo' : '🏦 Chuyển khoản'}
+              {item.paymentMethod === 'COD' ? 'COD' : 
+               item.paymentMethod === 'momo' ? 'Momo' : 'Chuyển khoản'}
             </Text>
           </View>
         </View>
@@ -137,7 +138,7 @@ export default function OrderHistoryScreen({ navigation }: any) {
         </View>
       ) : orders.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>📦</Text>
+          <Icon name="cart-outline" size={64} color={theme.colors.primary} />
           <Text style={styles.emptyTitle}>Chưa có đơn hàng</Text>
           <Text style={styles.emptySubtext}>Hãy mua sắm để có đơn hàng đầu tiên</Text>
         </View>
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.surfaceAlt,
   },
   tabActive: {
@@ -198,14 +199,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: theme.spacing.huge,
   },
-  emptyText: {
-    fontSize: 64,
-    marginBottom: theme.spacing.lg,
-  },
   emptyTitle: {
     ...theme.typography.h3,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
   },
   emptySubtext: {
     ...theme.typography.body,
@@ -234,7 +232,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   statusText: {
     color: theme.colors.textOnPrimary,
@@ -248,10 +246,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
-  },
-  itemEmoji: {
-    fontSize: 20,
-    marginRight: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   itemText: {
     ...theme.typography.small,

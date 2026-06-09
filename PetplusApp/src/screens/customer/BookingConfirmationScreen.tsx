@@ -7,7 +7,8 @@ import { petService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 
 const BRANCHES: Record<string, string> = {
   'go-vap': 'Petplus Gò Vấp',
@@ -88,10 +89,10 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
           <Text style={styles.subtitle}>Vui lòng kiểm tra kỹ trước khi xác nhận</Text>
         </View>
 
-        <Card style={styles.summaryCard}>
+        <ModernCard style={styles.summaryCard}>
           <View style={styles.summaryHeader}>
             <View style={styles.summaryIcon}>
-              <Text style={{ fontSize: 24 }}>📋</Text>
+              <Icon name="calendar" size={24} color={theme.colors.primary} />
             </View>
             <View>
               <Text style={styles.summaryTitle}>Chi tiết lịch hẹn</Text>
@@ -103,7 +104,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Text>🏥</Text>
+              <Icon name="location" size={16} color={theme.colors.textSecondary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Chi nhánh</Text>
@@ -113,7 +114,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Text>👨‍⚕️</Text>
+              <Icon name="medical" size={16} color={theme.colors.textSecondary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Bác sĩ</Text>
@@ -123,7 +124,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Text>📅</Text>
+              <Icon name="calendar" size={16} color={theme.colors.textSecondary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Ngày khám</Text>
@@ -133,7 +134,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Text>⏰</Text>
+              <Icon name="time" size={16} color={theme.colors.textSecondary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Khung giờ</Text>
@@ -143,18 +144,18 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
 
           <View style={styles.infoRow}>
             <View style={styles.infoIcon}>
-              <Text>🐕</Text>
+              <Icon name="paw" size={16} color={theme.colors.textSecondary} />
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Thú cưng</Text>
               <Text style={styles.infoValue}>{petName}</Text>
             </View>
           </View>
-        </Card>
+        </ModernCard>
 
-        <Card style={styles.noticeCard}>
+        <ModernCard style={styles.noticeCard}>
           <View style={styles.noticeHeader}>
-            <Text style={styles.noticeIcon}>📌</Text>
+            <Icon name="information-circle" size={20} color={theme.colors.textPrimary} />
             <Text style={styles.noticeTitle}>Lưu ý quan trọng</Text>
           </View>
           <View style={styles.noticeList}>
@@ -163,7 +164,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
             <Text style={styles.noticeItem}>• Mang theo sổ tiêm chủng (nếu có)</Text>
             <Text style={styles.noticeItem}>• Thú cưng nên nhịn ăn 4 tiếng trước khám</Text>
           </View>
-        </Card>
+        </ModernCard>
 
         <Button
           title={loading ? 'Đang xác nhận...' : 'Xác nhận đặt lịch'}
@@ -175,7 +176,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
         />
         
         <Button
-          title="← Quay lại"
+          title="Quay lại"
           onPress={() => navigation.goBack()}
           variant="ghost"
           fullWidth
@@ -192,7 +193,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       >
         <View style={styles.notificationOverlay}>
           <View style={[styles.notificationCard, isSuccess && styles.notificationSuccess]}>
-            <Text style={styles.notificationIcon}>{isSuccess ? '✅' : '❌'}</Text>
+            <Icon name={isSuccess ? 'checkmark' : 'close'} size={24} color={isSuccess ? theme.colors.success : theme.colors.danger} />
             <Text style={styles.notificationText}>{notificationMessage}</Text>
           </View>
         </View>
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
   },
   summaryCard: {
-    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   summaryHeader: {
     flexDirection: 'row',
@@ -292,9 +293,6 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   },
-  noticeIcon: {
-    fontSize: 20,
-  },
   noticeTitle: {
     ...theme.typography.bodyBold,
     color: theme.colors.textPrimary,
@@ -332,9 +330,6 @@ const styles = StyleSheet.create({
   },
   notificationSuccess: {
     borderLeftColor: theme.colors.success,
-  },
-  notificationIcon: {
-    fontSize: 24,
   },
   notificationText: {
     ...theme.typography.body,

@@ -5,7 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { appointmentService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 import Button from '../../components/Button';
 
 const BRANCHES: Record<string, string> = {
@@ -21,20 +22,18 @@ const DOCTORS: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: 'Chờ xác nhận', color: '#F57C00', bg: '#FFF3E0' },
-  confirmed: { label: 'Đã xác nhận', color: '#1976D2', bg: '#E3F2FD' },
-  completed: { label: 'Hoàn thành', color: '#2E7D32', bg: '#E8F5E9' },
-  cancelled: { label: 'Đã hủy', color: '#D32F2F', bg: '#FFEBEE' },
+  pending: { label: 'Chờ xác nhận', color: theme.colors.warning, bg: theme.colors.warningBg },
+  confirmed: { label: 'Đã xác nhận', color: theme.colors.info, bg: theme.colors.infoBg },
+  completed: { label: 'Hoàn thành', color: theme.colors.success, bg: theme.colors.successBg },
+  cancelled: { label: 'Đã hủy', color: theme.colors.danger, bg: theme.colors.dangerBg },
 };
 
-// Sample data for demo
 const SAMPLE_APPOINTMENTS = [
   {
     id: 'apt_1',
     branchId: 'go-vap',
     doctorId: 'dr-a',
     petName: 'Buddy',
-    petEmoji: '🐕',
     dateTime: new Date('2026-06-10T10:00:00'),
     slot: '10:00 - 12:00',
     status: 'confirmed',
@@ -45,7 +44,6 @@ const SAMPLE_APPOINTMENTS = [
     branchId: 'quan-11',
     doctorId: 'dr-b',
     petName: 'Mèo',
-    petEmoji: '🐈',
     dateTime: new Date('2026-06-15T14:00:00'),
     slot: '14:00 - 16:00',
     status: 'pending',
@@ -56,7 +54,6 @@ const SAMPLE_APPOINTMENTS = [
     branchId: 'go-vap',
     doctorId: 'dr-a',
     petName: 'Buddy',
-    petEmoji: '',
     dateTime: new Date('2026-05-20T09:00:00'),
     slot: '09:00 - 11:00',
     status: 'completed',
@@ -97,10 +94,10 @@ export default function ScheduleScreen({ navigation }: any) {
     const date = apt.dateTime?.toLocaleDateString?.('vi-VN') || 'dd/mm/yyyy';
     
     return (
-      <Card key={apt.id} style={styles.appointmentCard}>
+      <ModernCard key={apt.id} style={styles.appointmentCard}>
         <View style={styles.aptHeader}>
           <View style={styles.aptPet}>
-            <Text style={styles.aptPetEmoji}>{apt.petEmoji}</Text>
+            <Icon name="paw" size={24} color={theme.colors.primary} />
             <Text style={styles.aptPetName}>{apt.petName}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
@@ -110,19 +107,19 @@ export default function ScheduleScreen({ navigation }: any) {
 
         <View style={styles.aptDetails}>
           <View style={styles.aptDetailRow}>
-            <Text style={styles.detailIcon}></Text>
+            <Icon name="location" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>{BRANCHES[apt.branchId]}</Text>
           </View>
           <View style={styles.aptDetailRow}>
-            <Text style={styles.detailIcon}>👨‍️</Text>
+            <Icon name="medical" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>{DOCTORS[apt.doctorId]}</Text>
           </View>
           <View style={styles.aptDetailRow}>
-            <Text style={styles.detailIcon}>📅</Text>
+            <Icon name="calendar" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>{date} • {apt.slot}</Text>
           </View>
           <View style={styles.aptDetailRow}>
-            <Text style={styles.detailIcon}>🩺</Text>
+            <Icon name="medkit" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>{apt.service}</Text>
           </View>
         </View>
@@ -146,7 +143,7 @@ export default function ScheduleScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
         )}
-      </Card>
+      </ModernCard>
     );
   };
 
@@ -156,7 +153,7 @@ export default function ScheduleScreen({ navigation }: any) {
         title="Lịch hẹn"
         subtitle={`${upcoming.length} lịch sắp tới`}
         showBack={false}
-        rightIcon="➕"
+        rightIcon="add"
         onRightPress={() => navigation.navigate('SelectBranch')}
       />
 
@@ -185,13 +182,13 @@ export default function ScheduleScreen({ navigation }: any) {
             upcoming.map(renderAppointment)
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📅</Text>
+              <Icon name="calendar-outline" size={64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
               <Text style={styles.emptyTitle}>Chưa có lịch hẹn nào</Text>
               <Text style={styles.emptyText}>Đặt lịch khám cho thú cưng của bạn</Text>
               <Button
                 title="Đặt lịch ngay"
                 onPress={() => navigation.navigate('SelectBranch')}
-                icon="➕"
+                icon="add"
                 style={{ marginTop: theme.spacing.lg }}
               />
             </View>
@@ -201,7 +198,7 @@ export default function ScheduleScreen({ navigation }: any) {
             history.map(renderAppointment)
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📋</Text>
+              <Icon name="calendar" size={64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
               <Text style={styles.emptyTitle}>Chưa có lịch sử</Text>
               <Text style={styles.emptyText}>Lịch sử khám sẽ hiển thị ở đây</Text>
             </View>
@@ -259,9 +256,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  aptPetEmoji: {
-    fontSize: 24,
-  },
   aptPetName: {
     fontSize: 16,
     fontWeight: '600',
@@ -270,7 +264,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   statusText: {
     fontSize: 12,
@@ -284,9 +278,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-  },
-  detailIcon: {
-    fontSize: 16,
   },
   detailText: {
     fontSize: 14,
@@ -329,10 +320,6 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     paddingVertical: theme.spacing.huge,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: theme.spacing.lg,
   },
   emptyTitle: {
     ...theme.typography.h3,

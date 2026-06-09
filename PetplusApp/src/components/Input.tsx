@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, TextInput, TextInputProps, StyleSheet, ViewStyle } from 'react-native';
 import { theme } from '../utils/theme';
+import Icon, { IconName } from './Icon';
 
 interface InputProps extends TextInputProps {
   label?: string;
-  icon?: string;
+  icon?: IconName;
   error?: string;
   containerStyle?: ViewStyle;
 }
@@ -17,7 +18,7 @@ export default function Input({ label, icon, error, containerStyle, style, ...pr
         styles.inputWrapper,
         error ? styles.inputError : null,
       ]}>
-        {icon && <Text style={styles.icon}>{icon}</Text>}
+        {icon && <Icon name={icon} size={20} color={theme.colors.textSecondary} style={{ marginRight: theme.spacing.sm }} />}
         <TextInput
           style={[styles.input, style]}
           placeholderTextColor={theme.colors.textTertiary}
@@ -34,8 +35,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...theme.typography.smallBold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
@@ -43,17 +43,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     paddingHorizontal: theme.spacing.lg,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: theme.colors.borderLight,
   },
   inputError: {
     borderColor: theme.colors.danger,
-  },
-  icon: {
-    fontSize: 18,
-    marginRight: theme.spacing.sm,
+    backgroundColor: theme.colors.dangerBg,
   },
   input: {
     flex: 1,
@@ -62,7 +59,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
   },
   errorText: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.danger,
     marginTop: theme.spacing.xs,
   },

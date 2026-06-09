@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
+import Icon from '../components/Icon';
 
 // Customer screens
 import LoginScreen from '../screens/customer/LoginScreen';
@@ -35,30 +36,36 @@ import DoctorChatScreen from '../screens/doctor/DoctorChatScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Tab icon helper
-const TabIcon = ({ emoji, focused }: { emoji: string; focused: boolean }) => (
-  <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+// Modern tab icon helper
+const TabIcon = ({ name, focused }: { name: any; focused: boolean }) => (
+  <Icon
+    name={name}
+    size={24}
+    color={focused ? theme.colors.primary : theme.colors.textTertiary}
+  />
 );
 
-// Customer Tab Navigator - 5 tabs matching wireframe
+// Customer Tab Navigator — 5 tabs matching wireframe
 function CustomerTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: theme.colors.primaryDarker,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.borderLight,
           borderTopWidth: 1,
           height: 64,
           paddingBottom: 8,
           paddingTop: 6,
+          ...theme.shadow.xs,
         },
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '500',
+          marginTop: 2,
         },
       }}
     >
@@ -67,7 +74,7 @@ function CustomerTabNavigator() {
         component={HomeScreen}
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -75,7 +82,7 @@ function CustomerTabNavigator() {
         component={PetListScreen}
         options={{
           title: 'My pet',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🐾" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'paw' : 'paw-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -83,7 +90,7 @@ function CustomerTabNavigator() {
         component={ScheduleScreen}
         options={{
           title: 'Schedule',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📅" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -91,7 +98,7 @@ function CustomerTabNavigator() {
         component={DoctorSelectScreen}
         options={{
           title: 'Message',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'chatbubbles' : 'chat-outline'} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -99,7 +106,7 @@ function CustomerTabNavigator() {
         component={ProfileScreen}
         options={{
           title: 'Account',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -139,8 +146,8 @@ function DoctorStackNavigator() {
 
 function LoadingScreen() {
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, color: '#2E7D32' }}>Đang tải...</Text>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+      <Text style={{ fontSize: 18, color: theme.colors.primary, fontWeight: '600' }}>Đang tải...</Text>
     </View>
   );
 }

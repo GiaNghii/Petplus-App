@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { petService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import { Pet } from '../../types';
+import Icon from '../../components/Icon';
+import ModernCard from '../../components/ModernCard';
+import Button from '../../components/Button';
 
 const DOCTORS = [
-  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', status: 'available', avatar: '👨‍⚕️' },
-  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', status: 'available', avatar: '👩‍⚕️' },
-  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', status: 'busy', avatar: '‍⚕️' },
+  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', status: 'available' },
+  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', status: 'available' },
+  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', status: 'busy' },
 ];
 
 export default function HomeScreen({ navigation }: any) {
@@ -35,7 +38,6 @@ export default function HomeScreen({ navigation }: any) {
 
   const selectedPet = pets[selectedPetIndex];
   const petName = selectedPet?.name || 'Chưa có pet';
-  const petEmoji = selectedPet?.species === 'dog' ? '🐕' : selectedPet?.species === 'cat' ? '🐈' : '';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -43,27 +45,26 @@ export default function HomeScreen({ navigation }: any) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.petSelector}
               onPress={() => setShowPetDropdown(true)}
             >
-              <Text style={styles.petEmoji}>{petEmoji}</Text>
+              <Icon name="paw" size={16} color={theme.colors.primary} />
               <Text style={styles.petName}>{petName}</Text>
-              <Text style={styles.petArrow}>▼</Text>
+              <Icon name="arrow-down" size={12} color={theme.colors.textSecondary} />
             </TouchableOpacity>
             <View style={styles.logoText}>
-              <Text style={styles.logoEmoji}></Text>
-              <Text style={styles.logoTitle}>PetCare</Text>
+              <Text style={styles.logoTitle}>Petplus</Text>
             </View>
             <TouchableOpacity style={styles.notificationBtn}>
-              <Text style={styles.notificationIcon}></Text>
+              <Icon name="notifications" size={18} color={theme.colors.textPrimary} />
               <View style={styles.notificationDot} />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
           <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('Shop')}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Icon name="search" size={16} color={theme.colors.textTertiary} />
             <Text style={styles.searchPlaceholder}>Tìm kiếm dịch vụ bác sĩ, sản phẩm...</Text>
           </TouchableOpacity>
         </View>
@@ -75,7 +76,7 @@ export default function HomeScreen({ navigation }: any) {
           animationType="fade"
           onRequestClose={() => setShowPetDropdown(false)}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
             onPress={() => setShowPetDropdown(false)}
@@ -93,16 +94,14 @@ export default function HomeScreen({ navigation }: any) {
                     setShowPetDropdown(false);
                   }}
                 >
-                  <Text style={styles.dropdownEmoji}>
-                    {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : ''}
-                  </Text>
+                  <Icon name="paw" size={20} color={theme.colors.primary} />
                   <Text style={[
                     styles.dropdownText,
                     index === selectedPetIndex && styles.dropdownTextSelected
                   ]}>
                     {pet.name}
                   </Text>
-                  {index === selectedPetIndex && <Text style={styles.checkmark}>✓</Text>}
+                  {index === selectedPetIndex && <Icon name="checkmark" size={16} color={theme.colors.primary} />}
                 </TouchableOpacity>
               ))}
               <TouchableOpacity
@@ -112,7 +111,7 @@ export default function HomeScreen({ navigation }: any) {
                   navigation.navigate('AddPet');
                 }}
               >
-                <Text style={styles.dropdownAddText}>➕ Thêm thú cưng mới</Text>
+                <Text style={styles.dropdownAddText}>Thêm thú cưng mới</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -121,113 +120,125 @@ export default function HomeScreen({ navigation }: any) {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: '#E8F5E9' }]}
+            style={[styles.quickActionCard, { backgroundColor: theme.colors.primaryBg }]}
             onPress={() => navigation.navigate('Chat', { doctorId: 'dr-a', doctorName: 'Nguyễn Văn A', petName: petName })}
           >
-            <Text style={styles.quickActionIcon}></Text>
-            <Text style={[styles.quickActionText, { color: '#2E7D32' }]}>Tư vấn ngay</Text>
+            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.primary }]}>
+              <Icon name="chat" size={22} color={theme.colors.textOnPrimary} />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.primaryDarker }]}>Tư vấn ngay</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: '#F1F8E9' }]}
+            style={[styles.quickActionCard, { backgroundColor: theme.colors.secondaryBg }]}
             onPress={() => navigation.navigate('ScheduleTab')}
           >
-            <Text style={styles.quickActionIcon}>📅</Text>
-            <Text style={[styles.quickActionText, { color: '#558B2F' }]}>Đặt lịch</Text>
+            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.secondary }]}>
+              <Icon name="calendar" size={22} color={theme.colors.textOnPrimary} />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.secondary }]}>Đặt lịch</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: '#F3E5F5' }]}
+            style={[styles.quickActionCard, { backgroundColor: theme.colors.accentBg }]}
             onPress={() => navigation.navigate('Shop')}
           >
-            <Text style={styles.quickActionIcon}>💊</Text>
-            <Text style={[styles.quickActionText, { color: '#7B1FA2' }]}>Mua thuốc</Text>
+            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.accent }]}>
+              <Icon name="medkit" size={22} color={theme.colors.textPrimary} />
+            </View>
+            <Text style={[styles.quickActionText, { color: theme.colors.textPrimary }]}>Mua thuốc</Text>
           </TouchableOpacity>
         </View>
 
         {/* Appointment Card */}
-        <View style={styles.appointmentCard}>
+        <ModernCard style={styles.appointmentCard} header={
           <View style={styles.appointmentHeader}>
-            <Text style={styles.appointmentTitle}>BẠN CÓ LỊCH KHÁM BỆNH SẮP TỚI</Text>
+            <Text style={styles.appointmentTitle}>Lịch khám sắp tới</Text>
             <TouchableOpacity>
               <Text style={styles.viewDetail}>Xem chi tiết →</Text>
             </TouchableOpacity>
           </View>
+        }>
           <View style={styles.appointmentContent}>
             <View style={styles.appointmentImage}>
-              <Text style={styles.dogEmoji}>{petEmoji}</Text>
+              <Icon name="paw" size={32} color={theme.colors.primary} />
             </View>
             <View style={styles.appointmentInfo}>
               <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Ngày khám:</Text>
+                <Text style={styles.appointmentLabel}>Ngày khám</Text>
                 <Text style={styles.appointmentValue}>dd/mm/yyyy</Text>
               </View>
               <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Khung giờ:</Text>
+                <Text style={styles.appointmentLabel}>Khung giờ</Text>
                 <Text style={styles.appointmentValue}>10:00 - 12:00</Text>
               </View>
               <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Pet:</Text>
+                <Text style={styles.appointmentLabel}>Pet</Text>
                 <Text style={styles.appointmentValue}>{petName}</Text>
               </View>
               <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Bác sĩ:</Text>
+                <Text style={styles.appointmentLabel}>Bác sĩ</Text>
                 <Text style={styles.appointmentValue}>BS. Nguyễn B</Text>
               </View>
             </View>
           </View>
-        </View>
+        </ModernCard>
 
         {/* Doctors Online */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CÁC BÁC SĨ ĐANG ONLINE</Text>
+            <Text style={styles.sectionTitle}>Bác sĩ đang online</Text>
             <TouchableOpacity>
               <Text style={styles.viewAll}>Xem tất cả →</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.doctorCard}>
-            <View style={styles.doctorAvatar}>
-              <Text style={{ fontSize: 36 }}>👨⚕️</Text>
+          <ModernCard>
+            <View style={styles.doctorCard}>
+              <View style={styles.doctorAvatar}>
+                <Icon name="medical" size={28} color={theme.colors.primary} />
+              </View>
+              <View style={styles.doctorInfo}>
+                <Text style={styles.doctorName}>Bác sĩ C</Text>
+                <Text style={styles.doctorSpecialty}>Chuyên gia nội khoa</Text>
+              </View>
+              <Button
+                title="Chat ngay"
+                size="sm"
+                onPress={() => navigation.navigate('Chat', { doctorId: 'dr-c', doctorName: 'Bác sĩ C', petName: petName })}
+              />
             </View>
-            <View style={styles.doctorInfo}>
-              <Text style={styles.doctorName}>Bác sĩ C</Text>
-              <Text style={styles.doctorSpecialty}>Chuyên gia nội khoa</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.chatButton}
-              onPress={() => navigation.navigate('Chat', { doctorId: 'dr-c', doctorName: 'Bác sĩ C', petName: petName })}
-            >
-              <Text style={styles.chatButtonText}>Chat ngay</Text>
-            </TouchableOpacity>
-          </View>
+          </ModernCard>
         </View>
 
         {/* Purchased Medicines */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CÁC ĐƠN THUỐC ĐÃ MUA</Text>
+            <Text style={styles.sectionTitle}>Đơn thuốc đã mua</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
               <Text style={styles.viewAll}>Xem tất cả →</Text>
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.medicineScroll}>
             {[
-              { name: 'Breeders Chow', price: '320.000 đ', rating: '4.8', image: '', color: '#E3F2FD' },
-              { name: 'Medicated Special', price: '280.000 đ', rating: '4.7', image: '💊', color: '#F3E5F5' },
-              { name: 'NutriPro 300', price: '150.000 đ', rating: '4.6', image: '🧴', color: '#E8F5E9' },
+              { name: 'Breeders Chow', price: '320.000 đ', rating: '4.8', icon: 'medkit-outline', color: theme.colors.infoBg },
+              { name: 'Medicated Special', price: '280.000 đ', rating: '4.7', icon: 'medkit-outline', color: theme.colors.secondaryBg },
+              { name: 'NutriPro 300', price: '150.000 đ', rating: '4.6', icon: 'medkit-outline', color: theme.colors.successBg },
             ].map((item, index) => (
-              <View key={index} style={styles.medicineCard}>
+              <ModernCard key={index} style={styles.medicineCard} padding="md">
                 <View style={[styles.medicineImage, { backgroundColor: item.color }]}>
-                  <Text style={{ fontSize: 40 }}>{item.image}</Text>
+                  <Icon name="medkit" size={32} color={theme.colors.primary} />
                 </View>
                 <Text style={styles.medicineName} numberOfLines={1}>{item.name}</Text>
                 <Text style={styles.medicinePrice}>{item.price}</Text>
                 <View style={styles.medicineRating}>
-                  <Text style={styles.medicineRatingText}>⭐ {item.rating}</Text>
+                  <Icon name="star" size={12} color={theme.colors.accent} />
+                  <Text style={styles.medicineRatingText}> {item.rating}</Text>
                 </View>
-                <TouchableOpacity style={styles.rebuyButton}>
-                  <Text style={styles.rebuyButtonText}>Mua lại</Text>
-                </TouchableOpacity>
-              </View>
+                <Button
+                  title="Mua lại"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('Shop')}
+                />
+              </ModernCard>
             ))}
           </ScrollView>
         </View>
@@ -235,19 +246,22 @@ export default function HomeScreen({ navigation }: any) {
         {/* Flash Sale */}
         <View style={styles.section}>
           <View style={styles.flashHeader}>
-            <Text style={styles.flashTitle}> FLASH SALE</Text>
+            <View style={styles.flashTitleWrap}>
+              <Icon name="flash" size={16} color={theme.colors.danger} />
+              <Text style={styles.flashTitle}>Flash Sale</Text>
+            </View>
             <Text style={styles.flashTimer}>Kết thúc sau: 02:15:30</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.flashScroll}>
             {[
-              { name: 'Pedigree cho chó trưởng thành', price: '199.000 đ', oldPrice: '250.000 đ', discount: '-20%', image: '🍖', color: '#FFF3E0' },
-              { name: 'Sữa dinh dưỡng cho cún', price: '125.000 đ', oldPrice: '180.000 đ', discount: '-30%', image: '🥛', color: '#E3F2FD' },
-              { name: 'Pate dinh dưỡng cho mèo', price: '89.000 đ', oldPrice: '120.000 đ', discount: '-25%', image: '🥫', color: '#F3E5F5' },
+              { name: 'Pedigree cho chó trưởng thành', price: '199.000 đ', oldPrice: '250.000 đ', discount: '-20%', icon: 'medkit-outline', color: theme.colors.secondaryBg },
+              { name: 'Sữa dinh dưỡng cho cún', price: '125.000 đ', oldPrice: '180.000 đ', discount: '-30%', icon: 'medkit-outline', color: theme.colors.infoBg },
+              { name: 'Pate dinh dưỡng cho mèo', price: '89.000 đ', oldPrice: '120.000 đ', discount: '-25%', icon: 'medkit-outline', color: theme.colors.accentBg },
             ].map((item, index) => (
-              <View key={index} style={styles.flashCard}>
+              <ModernCard key={index} style={styles.flashCard} padding="md">
                 <View style={styles.flashImageContainer}>
                   <View style={[styles.flashImage, { backgroundColor: item.color }]}>
-                    <Text style={{ fontSize: 40 }}>{item.image}</Text>
+                    <Icon name="medkit" size={32} color={theme.colors.primary} />
                   </View>
                   <View style={styles.discountBadge}>
                     <Text style={styles.discountText}>{item.discount}</Text>
@@ -256,10 +270,13 @@ export default function HomeScreen({ navigation }: any) {
                 <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
                 <Text style={styles.flashPrice}>{item.price}</Text>
                 <Text style={styles.flashOldPrice}>{item.oldPrice}</Text>
-                <TouchableOpacity style={styles.flashBuyButton}>
-                  <Text style={styles.flashBuyText}>Mua ngay</Text>
-                </TouchableOpacity>
-              </View>
+                <Button
+                  title="Mua ngay"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => navigation.navigate('Shop')}
+                />
+              </ModernCard>
             ))}
           </ScrollView>
         </View>
@@ -273,13 +290,15 @@ export default function HomeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAF5',
+    backgroundColor: theme.colors.background,
   },
   header: {
-    backgroundColor: '#E8F0E8',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.lg,
+    borderBottomLeftRadius: theme.radius.xxl,
+    borderBottomRightRadius: theme.radius.xxl,
   },
   headerTop: {
     flexDirection: 'row',
@@ -290,52 +309,39 @@ const styles = StyleSheet.create({
   petSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     gap: 6,
-  },
-  petEmoji: {
-    fontSize: 16,
   },
   petName: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
-  petArrow: {
-    fontSize: 10,
-    color: theme.colors.textSecondary,
-  },
   logoText: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  logoEmoji: {
-    fontSize: 20,
-  },
   logoTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: theme.colors.primaryDarker,
+    color: theme.colors.textOnPrimary,
   },
   notificationBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#fff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
-  notificationIcon: {
-    fontSize: 18,
-  },
   notificationDot: {
     position: 'absolute',
-    top: 6,
+    top: 8,
     right: 8,
     width: 8,
     height: 8,
@@ -345,14 +351,11 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: theme.spacing.lg,
-    height: 40,
-    borderRadius: 20,
+    height: 44,
+    borderRadius: theme.radius.pill,
     gap: theme.spacing.sm,
-  },
-  searchIcon: {
-    fontSize: 14,
   },
   searchPlaceholder: {
     fontSize: 13,
@@ -365,27 +368,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   dropdownMenu: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
     padding: theme.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    ...theme.shadow.lg,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: theme.radius.lg,
     gap: theme.spacing.sm,
   },
   dropdownItemSelected: {
     backgroundColor: theme.colors.primaryBg,
-  },
-  dropdownEmoji: {
-    fontSize: 20,
   },
   dropdownText: {
     flex: 1,
@@ -395,11 +391,6 @@ const styles = StyleSheet.create({
   dropdownTextSelected: {
     fontWeight: '600',
     color: theme.colors.primaryDarker,
-  },
-  checkmark: {
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '700',
   },
   dropdownAdd: {
     padding: theme.spacing.md,
@@ -422,12 +413,17 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flex: 1,
     padding: theme.spacing.md,
-    borderRadius: 12,
+    borderRadius: theme.radius.xl,
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    ...theme.shadow.sm,
   },
-  quickActionIcon: {
-    fontSize: 28,
+  quickIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quickActionText: {
     fontSize: 12,
@@ -435,42 +431,35 @@ const styles = StyleSheet.create({
   },
   appointmentCard: {
     marginHorizontal: theme.spacing.lg,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
   },
   appointmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
   appointmentTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.primaryDarker,
-    flex: 1,
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    textTransform: 'uppercase',
   },
   viewDetail: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.primary,
     fontWeight: '600',
   },
   appointmentContent: {
     flexDirection: 'row',
     gap: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   appointmentImage: {
     width: 80,
     height: 80,
-    borderRadius: 12,
+    borderRadius: theme.radius.lg,
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  dogEmoji: {
-    fontSize: 48,
   },
   appointmentInfo: {
     flex: 1,
@@ -479,7 +468,7 @@ const styles = StyleSheet.create({
   appointmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
   },
   appointmentLabel: {
     fontSize: 12,
@@ -502,27 +491,23 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...theme.typography.h4,
     color: theme.colors.textPrimary,
   },
   viewAll: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.primary,
     fontWeight: '600',
   },
   doctorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: theme.spacing.md,
-    borderRadius: 12,
     gap: theme.spacing.md,
   },
   doctorAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -531,75 +516,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   doctorName: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...theme.typography.smallBold,
     color: theme.colors.textPrimary,
   },
   doctorSpecialty: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
-  chatButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  chatButtonText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
   medicineScroll: {
     paddingRight: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   medicineCard: {
-    width: 120,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    marginRight: theme.spacing.md,
+    width: 140,
     alignItems: 'center',
   },
   medicineImage: {
     width: 70,
     height: 70,
-    borderRadius: 12,
+    borderRadius: theme.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
   medicineName: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...theme.typography.smallBold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
     marginBottom: 4,
   },
   medicinePrice: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: theme.colors.danger,
     marginBottom: 4,
   },
   medicineRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
   medicineRatingText: {
-    fontSize: 10,
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
-  },
-  rebuyButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  rebuyButtonText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 11,
-    fontWeight: '600',
   },
   flashHeader: {
     flexDirection: 'row',
@@ -607,25 +567,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
+  flashTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   flashTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    ...theme.typography.h4,
     color: theme.colors.danger,
   },
   flashTimer: {
-    fontSize: 12,
+    ...theme.typography.caption,
     color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   flashScroll: {
     paddingRight: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   flashCard: {
-    width: 140,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: theme.spacing.md,
-    marginRight: theme.spacing.md,
+    width: 160,
   },
   flashImageContainer: {
     position: 'relative',
@@ -634,7 +595,7 @@ const styles = StyleSheet.create({
   flashImage: {
     width: '100%',
     height: 90,
-    borderRadius: 12,
+    borderRadius: theme.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -645,7 +606,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.danger,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.sm,
   },
   discountText: {
     color: theme.colors.textOnPrimary,
@@ -653,32 +614,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   flashName: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...theme.typography.smallBold,
     color: theme.colors.textPrimary,
     marginBottom: 4,
     minHeight: 30,
   },
   flashPrice: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: theme.colors.danger,
   },
   flashOldPrice: {
-    fontSize: 11,
+    fontSize: 12,
     color: theme.colors.textTertiary,
     textDecorationLine: 'line-through',
     marginBottom: theme.spacing.sm,
-  },
-  flashBuyButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  flashBuyText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 11,
-    fontWeight: '600',
   },
 });

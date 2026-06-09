@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 
 const DOCTORS = [
   { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', rating: 4.9, reviews: 128, patients: 2 },
@@ -39,12 +40,9 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
             setSelectedDoctor(null);
           }}
         >
-          <Card style={[
-            styles.autoAssignCard,
-            autoAssign && styles.autoAssignCardSelected,
-          ]}>
+          <ModernCard style={autoAssign ? { ...styles.autoAssignCard, ...styles.autoAssignCardSelected } : styles.autoAssignCard}>
             <View style={styles.autoAssignIcon}>
-              <Text style={{ fontSize: 24 }}>🔄</Text>
+              <Icon name="flash" size={24} color={theme.colors.warning} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.autoAssignTitle}>Tự động gán bác sĩ</Text>
@@ -52,10 +50,10 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
             </View>
             {autoAssign && (
               <View style={styles.checkmark}>
-                <Text style={styles.checkmarkText}>✓</Text>
+                <Icon name="checkmark" size={14} color={theme.colors.textOnPrimary} />
               </View>
             )}
-          </Card>
+          </ModernCard>
         </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Hoặc chọn bác sĩ cụ thể:</Text>
@@ -69,22 +67,20 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
               setAutoAssign(false);
             }}
           >
-            <Card style={[
-              styles.doctorCard,
-              selectedDoctor === doctor.id && styles.doctorCardSelected,
-            ]}>
+            <ModernCard style={selectedDoctor === doctor.id ? { ...styles.doctorCard, ...styles.doctorCardSelected } : styles.doctorCard}>
               <View style={styles.doctorAvatar}>
-                <Text style={styles.doctorEmoji}>👨‍⚕️</Text>
+                <Icon name="person" size={32} color={theme.colors.primary} />
               </View>
               <View style={styles.doctorInfo}>
                 <Text style={styles.doctorName}>{doctor.name}</Text>
                 <Text style={styles.doctorSpecialty}>{doctor.specialty}</Text>
                 <View style={styles.doctorMeta}>
-                  <Text style={styles.doctorRating}>⭐ {doctor.rating}</Text>
+                  <Icon name="star" size={12} color={theme.colors.warning} />
+                  <Text style={styles.doctorRating}>{doctor.rating}</Text>
                   <Text style={styles.metaText}>({doctor.reviews} đánh giá)</Text>
                 </View>
                 <View style={styles.doctorMeta}>
-                  <Text style={styles.metaEmoji}>📅</Text>
+                  <Icon name="calendar" size={11} color={theme.colors.textSecondary} />
                   <Text style={styles.metaText}>
                     {doctor.patients}/3 bệnh nhân hôm nay
                   </Text>
@@ -92,10 +88,10 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
               </View>
               {selectedDoctor === doctor.id && (
                 <View style={styles.checkmark}>
-                  <Text style={styles.checkmarkText}>✓</Text>
+                  <Icon name="checkmark" size={14} color={theme.colors.textOnPrimary} />
                 </View>
               )}
-            </Card>
+            </ModernCard>
           </TouchableOpacity>
         ))}
 
@@ -200,9 +196,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  doctorEmoji: {
-    fontSize: 32,
-  },
   doctorInfo: {
     flex: 1,
   },
@@ -225,9 +218,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: theme.colors.warning,
-  },
-  metaEmoji: {
-    fontSize: 11,
+    marginLeft: 2,
   },
   metaText: {
     fontSize: 12,
@@ -240,11 +231,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkmarkText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '700',
   },
   footer: {
     position: 'absolute',

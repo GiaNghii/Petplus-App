@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Alert, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { petService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import { PRODUCTS, CATEGORIES } from '../../data/products';
+import Icon from '../../components/Icon';
 
 export default function ShopScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -34,7 +35,7 @@ export default function ShopScreen({ navigation }: any) {
       if (result.success && result.pets && result.pets.length > 0) {
         const pet = result.pets[0];
         Alert.alert(
-          '⚠️ Thuốc kê đơn',
+          'Thuốc kê đơn',
           `Đảm bảo thuốc này được sử dụng cho đúng thú cưng được kê đơn.\n\nKê đơn cho: ${pet.name} (${pet.breed})`,
           [
             { text: 'Hủy', style: 'cancel' },
@@ -42,7 +43,7 @@ export default function ShopScreen({ navigation }: any) {
               text: 'Xác nhận',
               onPress: () => {
                 addItem(product, pet.id);
-                Alert.alert('✓ Đã thêm', `${product.name} đã được thêm vào giỏ`);
+                Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
               },
             },
           ]
@@ -53,7 +54,7 @@ export default function ShopScreen({ navigation }: any) {
       }
     } else {
       addItem(product);
-      Alert.alert('✓ Đã thêm', `${product.name} đã được thêm vào giỏ`);
+      Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
     }
   };
 
@@ -64,7 +65,11 @@ export default function ShopScreen({ navigation }: any) {
     return (
       <View style={styles.productCard}>
         <View style={[styles.productImage, { backgroundColor: item.bgColor }]}>
-          <Text style={styles.productEmoji}>{item.imageEmoji}</Text>
+          {item.imageUrl ? (
+            <Image source={{ uri: item.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+          ) : (
+            <Icon name="medkit" size={48} color={theme.colors.primaryLight} />
+          )}
           {item.discount && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>-{item.discount}%</Text>
@@ -77,19 +82,19 @@ export default function ShopScreen({ navigation }: any) {
           )}
           {item.isHot && (
             <View style={styles.hotBadge}>
-              <Text style={styles.hotBadgeText}>🔥 HOT</Text>
+              <Text style={styles.hotBadgeText}>HOT</Text>
             </View>
           )}
           {item.type === 'prescription' && (
             <View style={styles.lockBadge}>
-              <Text style={styles.lockText}>🔒 Kê đơn</Text>
+              <Text style={styles.lockText}>Kê đơn</Text>
             </View>
           )}
         </View>
         <View style={styles.productContent}>
           <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
           <View style={styles.ratingRow}>
-            <Text style={styles.ratingStar}>⭐</Text>
+            <Icon name="star" size={11} color={theme.colors.warning} />
             <Text style={styles.ratingText}>{item.rating}</Text>
             <Text style={styles.reviewCount}>({item.reviews})</Text>
           </View>
@@ -104,7 +109,7 @@ export default function ShopScreen({ navigation }: any) {
               style={styles.addButton}
               onPress={() => handleAddToCart(item)}
             >
-              <Text style={styles.addButtonIcon}>🛒</Text>
+              <Icon name="cart" size={14} color={theme.colors.textOnPrimary} />
               <Text style={styles.addButtonText}>Thêm</Text>
             </TouchableOpacity>
           ) : (
@@ -140,7 +145,7 @@ export default function ShopScreen({ navigation }: any) {
       {/* Search + Cart */}
       <View style={styles.toolbar}>
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Icon name="search" size={16} color={theme.colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Tìm thuốc theo tên hoặc triệu chứng..."
@@ -153,7 +158,7 @@ export default function ShopScreen({ navigation }: any) {
           style={styles.cartBtn}
           onPress={() => navigation.navigate('Cart')}
         >
-          <Text style={styles.cartIcon}>🛒</Text>
+          <Icon name="cart" size={20} color={theme.colors.textPrimary} />
           {totalItems > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{totalItems}</Text>
@@ -177,7 +182,7 @@ export default function ShopScreen({ navigation }: any) {
             ]}
             onPress={() => setActiveCategory(cat.id)}
           >
-            <Text style={styles.catEmoji}>{cat.emoji}</Text>
+            <Icon name="medkit" size={14} color={activeCategory === cat.id ? theme.colors.textOnPrimary : theme.colors.textSecondary} />
             <Text style={[
               styles.catText,
               activeCategory === cat.id && styles.catTextActive,
@@ -213,7 +218,7 @@ export default function ShopScreen({ navigation }: any) {
         >
           <View style={styles.floatingCartLeft}>
             <View style={styles.floatingCartIconWrap}>
-              <Text style={styles.floatingCartIcon}>🛒</Text>
+              <Icon name="cart" size={22} color={theme.colors.primary} />
               <View style={styles.floatingCartBadge}>
                 <Text style={styles.floatingCartBadgeText}>{totalItems}</Text>
               </View>
@@ -224,7 +229,8 @@ export default function ShopScreen({ navigation }: any) {
             </View>
           </View>
           <View style={styles.floatingCartBtn}>
-            <Text style={styles.floatingCartBtnText}>Xem giỏ →</Text>
+            <Text style={styles.floatingCartBtnText}>Xem giỏ</Text>
+            <Icon name="arrow-forward" size={14} color={theme.colors.textOnPrimary} />
           </View>
         </TouchableOpacity>
       )}
@@ -235,7 +241,7 @@ export default function ShopScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: theme.colors.background,
   },
   header: {
     paddingHorizontal: 16,
@@ -244,11 +250,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#212121',
+    color: theme.colors.textPrimary,
   },
   headerSub: {
     fontSize: 14,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   toolbar: {
@@ -261,41 +267,35 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.md,
     paddingHorizontal: 14,
     height: 44,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    borderColor: theme.colors.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#212121',
+    color: theme.colors.textPrimary,
+    marginLeft: 8,
   },
   cartBtn: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     position: 'relative',
-  },
-  cartIcon: {
-    fontSize: 20,
   },
   cartBadge: {
     position: 'absolute',
     top: -6,
     right: -6,
-    backgroundColor: '#D32F2F',
+    backgroundColor: theme.colors.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cartBadgeText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -316,33 +316,30 @@ const styles = StyleSheet.create({
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     gap: 6,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
   },
   catChipActive: {
-    backgroundColor: '#2E7D32',
-    borderColor: '#2E7D32',
-  },
-  catEmoji: {
-    fontSize: 14,
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   catText: {
     fontSize: 13,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   catTextActive: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontWeight: '600',
   },
   resultText: {
     fontSize: 12,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     paddingHorizontal: 16,
     paddingBottom: 8,
     fontWeight: '500',
@@ -357,14 +354,10 @@ const styles = StyleSheet.create({
   },
   productCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...theme.shadow.sm,
   },
   productImage: {
     height: 120,
@@ -372,20 +365,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  productEmoji: {
-    fontSize: 48,
+  productImageThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
   },
   discountBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#D32F2F',
+    backgroundColor: theme.colors.danger,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
   },
   discountText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 10,
     fontWeight: '700',
   },
@@ -393,13 +388,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#1976D2',
+    backgroundColor: theme.colors.info,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
   },
   newBadgeText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 9,
     fontWeight: '700',
   },
@@ -407,13 +402,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#FF6F00',
+    backgroundColor: theme.colors.secondary,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
   },
   hotBadgeText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 9,
     fontWeight: '700',
   },
@@ -424,12 +419,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
   },
   lockText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#D32F2F',
+    color: theme.colors.danger,
   },
   productContent: {
     padding: 12,
@@ -437,7 +432,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#212121',
+    color: theme.colors.textPrimary,
     minHeight: 36,
     lineHeight: 18,
   },
@@ -447,17 +442,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
     gap: 4,
   },
-  ratingStar: {
-    fontSize: 11,
-  },
   ratingText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#212121',
+    color: theme.colors.textPrimary,
   },
   reviewCount: {
     fontSize: 10,
-    color: '#9E9E9E',
+    color: theme.colors.textTertiary,
   },
   priceRow: {
     flexDirection: 'row',
@@ -468,28 +460,25 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: theme.colors.primary,
   },
   oldPrice: {
     fontSize: 11,
-    color: '#9E9E9E',
+    color: theme.colors.textTertiary,
     textDecorationLine: 'line-through',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primary,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: theme.radius.md,
     marginTop: 8,
     gap: 6,
   },
-  addButtonIcon: {
-    fontSize: 14,
-  },
   addButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -497,26 +486,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 8,
+    backgroundColor: theme.colors.primaryBg,
+    borderRadius: theme.radius.md,
     marginTop: 8,
     padding: 4,
   },
   qtyBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#fff',
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
+    ...theme.shadow.xs,
   },
   qtyBtnText: {
-    color: '#2E7D32',
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '700',
     lineHeight: 18,
@@ -524,7 +509,7 @@ const styles = StyleSheet.create({
   qtyText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E7D32',
+    color: theme.colors.primary,
   },
   floatingCart: {
     position: 'absolute',
@@ -534,16 +519,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
+    borderTopColor: theme.colors.border,
+    ...theme.shadow.lg,
   },
   floatingCartLeft: {
     flexDirection: 'row',
@@ -553,20 +534,17 @@ const styles = StyleSheet.create({
   floatingCartIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: '#E8F5E9',
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-  },
-  floatingCartIcon: {
-    fontSize: 22,
   },
   floatingCartBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#D32F2F',
+    backgroundColor: theme.colors.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -575,27 +553,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   floatingCartBadgeText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 10,
     fontWeight: '700',
   },
   floatingCartCount: {
     fontSize: 11,
-    color: '#757575',
+    color: theme.colors.textSecondary,
   },
   floatingCartTotal: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2E7D32',
+    color: theme.colors.primary,
   },
   floatingCartBtn: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: theme.radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   floatingCartBtnText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontWeight: '600',
     fontSize: 13,
   },

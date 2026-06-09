@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Keyboard
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
+import Icon from '../../components/Icon';
 
 const PRODUCTS = [
   { id: 'p1', name: 'Thuốc kháng sinh Amoxicillin 250mg', price: 200000 },
@@ -55,7 +56,7 @@ export default function DoctorChatScreen({ route, navigation }: any) {
     setMessages([...messages, newMessage]);
     setShowProductList(false);
     Alert.alert(
-      '✓ Đã gửi đơn thuốc',
+      'Đã gửi đơn thuốc',
       `Đã gửi ${product.name} cho khách hàng. Họ có thể mua ngay trên app.`,
       [{ text: 'OK' }]
     );
@@ -78,13 +79,13 @@ export default function DoctorChatScreen({ route, navigation }: any) {
         </Text>
         {item.productLink && (
           <View style={styles.productCard}>
-            <Text style={styles.productEmoji}>💊</Text>
+            <Icon name="medkit" size={32} color={theme.colors.primary} />
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{item.productLink.name}</Text>
               <Text style={styles.productPrice}>
                 {item.productLink.price.toLocaleString('vi-VN')}đ
               </Text>
-              <Text style={styles.prescriptionNote}>📋 Đơn thuốc cho {petName}</Text>
+              <Text style={styles.prescriptionNote}>Đơn thuốc cho {petName}</Text>
             </View>
           </View>
         )}
@@ -99,9 +100,9 @@ export default function DoctorChatScreen({ route, navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header
         title={customerName}
-        subtitle={`🐕 ${petName} - Đang tư vấn`}
+        subtitle={`${petName} - Đang tư vấn`}
         onBack={() => navigation.goBack()}
-        rightIcon="📋"
+        rightIcon="create"
         onRightPress={() => {}}
         variant="primary"
       />
@@ -121,9 +122,9 @@ export default function DoctorChatScreen({ route, navigation }: any) {
       {showProductList && (
         <View style={styles.productPanel}>
           <View style={styles.productPanelHeader}>
-            <Text style={styles.productPanelTitle}>💊 Chọn thuốc kê đơn</Text>
+            <Text style={styles.productPanelTitle}>Chọn thuốc kê đơn</Text>
             <TouchableOpacity onPress={() => setShowProductList(false)}>
-              <Text style={styles.closeBtn}>✕</Text>
+              <Icon name="close" size={20} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
           {PRODUCTS.map((product) => (
@@ -132,14 +133,14 @@ export default function DoctorChatScreen({ route, navigation }: any) {
               style={styles.productItem}
               onPress={() => sendPrescription(product)}
             >
-              <Text style={styles.productEmoji}>💊</Text>
+              <Icon name="medkit" size={24} color={theme.colors.primary} />
               <View style={styles.productItemInfo}>
                 <Text style={styles.productItemName}>{product.name}</Text>
                 <Text style={styles.productItemPrice}>
                   {product.price.toLocaleString('vi-VN')}đ
                 </Text>
               </View>
-              <Text style={styles.sendProductBtn}>📤</Text>
+              <Icon name="send" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -150,7 +151,7 @@ export default function DoctorChatScreen({ route, navigation }: any) {
           style={styles.prescriptionBtn}
           onPress={() => setShowProductList(!showProductList)}
         >
-          <Text style={styles.prescriptionBtnText}>💊</Text>
+          <Icon name="medkit" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
         <TextInput
           style={styles.input}
@@ -164,7 +165,7 @@ export default function DoctorChatScreen({ route, navigation }: any) {
           onPress={sendMessage}
           disabled={!inputText.trim()}
         >
-          <Text style={styles.sendIcon}>➤</Text>
+          <Icon name="send" size={18} color={theme.colors.textOnPrimary} />
         </TouchableOpacity>
       </View>
       </KeyboardAvoidingView>
@@ -228,10 +229,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  productEmoji: {
-    fontSize: 32,
-    marginRight: theme.spacing.md,
+    gap: theme.spacing.md,
   },
   productInfo: {
     flex: 1,
@@ -269,10 +267,6 @@ const styles = StyleSheet.create({
     ...theme.typography.bodyBold,
     color: theme.colors.textPrimary,
   },
-  closeBtn: {
-    fontSize: 20,
-    color: theme.colors.textSecondary,
-  },
   productItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,9 +287,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
-  sendProductBtn: {
-    fontSize: 24,
-  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -311,9 +302,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  prescriptionBtnText: {
-    fontSize: 20,
   },
   input: {
     flex: 1,
@@ -335,9 +323,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: theme.colors.border,
-  },
-  sendIcon: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 18,
   },
 });

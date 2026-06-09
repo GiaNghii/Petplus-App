@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { theme } from '../../utils/theme';
+import Icon from '../../components/Icon';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
+import ModernCard from '../../components/ModernCard';
 
 export default function LoginScreen({ navigation }: any) {
   const { login } = useAuth();
@@ -39,7 +43,7 @@ export default function LoginScreen({ navigation }: any) {
         {/* Hero Section */}
         <View style={styles.hero}>
           <View style={styles.logoRow}>
-            <Text style={styles.logoEmoji}>🐾</Text>
+            <Icon name="paw" size={28} color={theme.colors.textOnPrimary} />
             <Text style={styles.logoText}>Petplus</Text>
           </View>
           <Text style={styles.welcomeText}>Chào mừng bạn</Text>
@@ -47,83 +51,69 @@ export default function LoginScreen({ navigation }: any) {
         </View>
 
         {/* Form Card */}
-        <View style={styles.formCard}>
+        <ModernCard style={styles.formCardOverlap} padding="xxl">
           {error ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
+              <Icon name="alert-circle" size={16} color={theme.colors.danger} />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          {/* Email */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>📧 Email</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="example@email.com"
-                placeholderTextColor={theme.colors.textTertiary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
+          <Input
+            label="Email"
+            icon="mail"
+            placeholder="example@email.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-          {/* Password */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>🔒 Mật khẩu</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="Nhập mật khẩu"
-                placeholderTextColor={theme.colors.textTertiary}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
-          </View>
+          <Input
+            label="Mật khẩu"
+            icon="lock-closed"
+            placeholder="Nhập mật khẩu"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.buttonDisabled]}
+          <Button
+            title="Đăng nhập"
             onPress={handleLogin}
+            loading={loading}
             disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>Đăng nhập</Text>
-            )}
-          </TouchableOpacity>
+            fullWidth
+            icon="arrow-forward"
+          />
 
-          {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>hoặc</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Register Link */}
-          <TouchableOpacity
-            style={styles.registerButton}
+          <Button
+            title="Tạo tài khoản mới"
+            variant="outline"
             onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.registerButtonText}>Tạo tài khoản mới</Text>
-          </TouchableOpacity>
-        </View>
+            fullWidth
+          />
+        </ModernCard>
 
         {/* Demo Accounts */}
-        <View style={styles.demoSection}>
-          <Text style={styles.demoTitle}>🚀 Dùng thử nhanh</Text>
+        <ModernCard style={styles.demoCard} variant="accent" padding="lg">
+          <View style={styles.demoTitleRow}>
+            <Icon name="flash" size={16} color={theme.colors.textPrimary} />
+            <Text style={styles.demoTitle}>Dùng thử nhanh</Text>
+          </View>
           <Text style={styles.demoSubtitle}>Bấm vào tài khoản để tự động điền thông tin</Text>
           <View style={styles.demoButtons}>
             <TouchableOpacity
               style={styles.demoButton}
               onPress={() => useDemoAccount('customer')}
             >
-              <Text style={styles.demoEmoji}>👤</Text>
+              <Icon name="person" size={32} color={theme.colors.primary} />
               <Text style={styles.demoName}>Khách hàng</Text>
               <Text style={styles.demoAccount}>demo@petplus.vn</Text>
             </TouchableOpacity>
@@ -131,16 +121,19 @@ export default function LoginScreen({ navigation }: any) {
               style={styles.demoButton}
               onPress={() => useDemoAccount('doctor')}
             >
-              <Text style={styles.demoEmoji}>👨‍⚕️</Text>
+              <Icon name="medical" size={32} color={theme.colors.primary} />
               <Text style={styles.demoName}>Bác sĩ</Text>
               <Text style={styles.demoAccount}>doctor@petplus.vn</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ModernCard>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerLogo}>🐾 Petplus</Text>
+          <View style={styles.footerLogoRow}>
+            <Icon name="paw" size={16} color={theme.colors.primary} />
+            <Text style={styles.footerLogoText}>Petplus</Text>
+          </View>
           <Text style={styles.footerText}>Chăm sóc thú cưng 24/7</Text>
         </View>
       </ScrollView>
@@ -151,18 +144,18 @@ export default function LoginScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   hero: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingTop: 40,
     paddingBottom: 48,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: theme.radius.xxl,
+    borderBottomRightRadius: theme.radius.xxl,
   },
   logoRow: {
     flexDirection: 'row',
@@ -170,18 +163,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 24,
   },
-  logoEmoji: {
-    fontSize: 28,
-  },
   logoText: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
   },
   welcomeText: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     marginBottom: 8,
   },
   heroSubtext: {
@@ -189,64 +179,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     lineHeight: 22,
   },
-  formCard: {
-    backgroundColor: '#fff',
+  formCardOverlap: {
     marginHorizontal: 20,
     marginTop: -28,
-    padding: 24,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
   },
   errorBox: {
-    backgroundColor: '#FFEBEE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.dangerBg,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: theme.radius.md,
     marginBottom: 16,
   },
   errorText: {
-    color: '#D32F2F',
+    color: theme.colors.danger,
     fontSize: 14,
     fontWeight: '500',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#212121',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-  },
-  input: {
-    height: 48,
-    fontSize: 16,
-    color: '#212121',
-  },
-  loginButton: {
-    backgroundColor: '#2E7D32',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    flex: 1,
   },
   divider: {
     flexDirection: 'row',
@@ -256,41 +206,31 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.border,
   },
   dividerText: {
-    color: '#9E9E9E',
+    color: theme.colors.textTertiary,
     paddingHorizontal: 16,
     fontSize: 14,
   },
-  registerButton: {
-    borderWidth: 1.5,
-    borderColor: '#2E7D32',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  registerButtonText: {
-    color: '#2E7D32',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  demoSection: {
+  demoCard: {
     marginHorizontal: 20,
     marginTop: 24,
-    backgroundColor: '#FFF8E1',
-    padding: 20,
-    borderRadius: 16,
+  },
+  demoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   demoTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#212121',
-    marginBottom: 4,
+    color: theme.colors.textPrimary,
   },
   demoSubtitle: {
     fontSize: 13,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     marginBottom: 16,
   },
   demoButtons: {
@@ -299,39 +239,41 @@ const styles = StyleSheet.create({
   },
   demoButton: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-  },
-  demoEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+    borderColor: theme.colors.border,
   },
   demoName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#212121',
+    color: theme.colors.textPrimary,
+    marginTop: 8,
   },
   demoAccount: {
     fontSize: 11,
-    color: '#757575',
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   footer: {
     alignItems: 'center',
     paddingVertical: 24,
   },
-  footerLogo: {
+  footerLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  footerLogoText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 4,
+    color: theme.colors.primary,
   },
   footerText: {
     fontSize: 13,
-    color: '#9E9E9E',
+    color: theme.colors.textTertiary,
   },
 });

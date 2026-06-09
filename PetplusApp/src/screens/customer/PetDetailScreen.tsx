@@ -5,8 +5,9 @@ import { petService } from '../../services/firestoreService';
 import { Pet } from '../../types';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
 import Button from '../../components/Button';
+import Icon from '../../components/Icon';
 
 export default function PetDetailScreen({ route, navigation }: any) {
   const { petId } = route.params;
@@ -23,6 +24,14 @@ export default function PetDetailScreen({ route, navigation }: any) {
       setPet(result.pet);
     }
     setLoading(false);
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return 'Chưa cập nhật';
+    if (typeof date === 'object' && 'seconds' in date) {
+      return new Date(date.seconds * 1000).toLocaleDateString('vi-VN');
+    }
+    return new Date(date).toLocaleDateString('vi-VN');
   };
 
   const handleDelete = () => {
@@ -78,7 +87,7 @@ export default function PetDetailScreen({ route, navigation }: any) {
       <Header
         title="Hồ sơ thú cưng"
         onBack={() => navigation.goBack()}
-        rightIcon="✏️"
+        rightIcon="create"
         onRightPress={() => Alert.alert('Sắp có', 'Tính năng đang phát triển')}
       />
 
@@ -86,19 +95,23 @@ export default function PetDetailScreen({ route, navigation }: any) {
         {/* Pet Header */}
         <View style={styles.petHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>
-              {pet.species === 'dog' ? '🐕' : pet.species === 'cat' ? '🐈' : '🐾'}
-            </Text>
+            <Icon name="paw" size={48} color={theme.colors.primary} />
           </View>
           <Text style={styles.petName}>{pet.name}</Text>
-          <Text style={styles.petBreed}>
-            {pet.species === 'dog' ? '🐕 Chó' : pet.species === 'cat' ? '🐈 Mèo' : '🐾 Khác'} • {pet.breed}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: theme.spacing.xs }}>
+            <Icon name="paw" size={14} color={theme.colors.textOnPrimary} />
+            <Text style={styles.petBreed}>
+              {' '}{pet.species === 'dog' ? 'Chó' : pet.species === 'cat' ? 'Mèo' : 'Khác'} • {pet.breed}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.content}>
-          <Card style={styles.infoCard}>
-            <Text style={styles.cardTitle}>📋 Thông tin cơ bản</Text>
+          <ModernCard style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="information-circle" size={20} color={theme.colors.primary} />
+              <Text style={styles.cardTitle}>Thông tin cơ bản</Text>
+            </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Tên</Text>
               <Text style={styles.infoValue}>{pet.name}</Text>
@@ -114,45 +127,60 @@ export default function PetDetailScreen({ route, navigation }: any) {
             <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.infoLabel}>Ngày sinh</Text>
               <Text style={styles.infoValue}>
-                {pet.birthDate ? new Date(pet.birthDate.seconds * 1000).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                {formatDate(pet.birthDate)}
               </Text>
             </View>
-          </Card>
+          </ModernCard>
 
-          <Card style={styles.infoCard}>
-            <Text style={styles.cardTitle}>🏥 Tiền sử bệnh</Text>
+          <ModernCard style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="medkit" size={20} color={theme.colors.primary} />
+              <Text style={styles.cardTitle}>Tiền sử bệnh</Text>
+            </View>
             <Text style={styles.historyText}>
               {pet.medicalHistory || 'Chưa có tiền sử bệnh'}
             </Text>
-          </Card>
+          </ModernCard>
 
-          <Card style={styles.infoCard}>
-            <Text style={styles.cardTitle}>⚠️ Dị ứng thuốc</Text>
+          <ModernCard style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="warning" size={20} color={theme.colors.primary} />
+              <Text style={styles.cardTitle}>Dị ứng thuốc</Text>
+            </View>
             {pet.drugAllergies && pet.drugAllergies.length > 0 ? (
               <View style={styles.tagsContainer}>
                 {pet.drugAllergies.map((allergy, index) => (
                   <View key={index} style={styles.allergyBadge}>
-                    <Text style={styles.allergyText}>⚠️ {allergy}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Icon name="alert-circle" size={13} color={theme.colors.danger} />
+                      <Text style={styles.allergyText}>{allergy}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
             ) : (
               <View style={styles.successBadge}>
-                <Text style={styles.successText}>✅ Không có dị ứng ghi nhận</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                  <Icon name="checkmark" size={14} color={theme.colors.success} />
+                  <Text style={styles.successText}>Không có dị ứng ghi nhận</Text>
+                </View>
               </View>
             )}
-          </Card>
+          </ModernCard>
 
-          <Card style={styles.infoCard}>
-            <Text style={styles.cardTitle}>💉 Lịch tiêm phòng</Text>
+          <ModernCard style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="medical" size={20} color={theme.colors.primary} />
+              <Text style={styles.cardTitle}>Lịch tiêm phòng</Text>
+            </View>
             {pet.vaccinationHistory && pet.vaccinationHistory.length > 0 ? (
               pet.vaccinationHistory.map((vaccine, index) => (
                 <View key={index} style={styles.vaccineItem}>
-                  <Text style={styles.vaccineCheck}>✅</Text>
+                  <Icon name="checkmark" size={18} color={theme.colors.success} style={{ marginRight: theme.spacing.md }} />
                   <View style={styles.vaccineInfo}>
                     <Text style={styles.vaccineName}>{vaccine.name}</Text>
                     <Text style={styles.vaccineDate}>
-                      {new Date(vaccine.date.seconds * 1000).toLocaleDateString('vi-VN')}
+                      {formatDate(vaccine.date)}
                     </Text>
                   </View>
                 </View>
@@ -160,16 +188,18 @@ export default function PetDetailScreen({ route, navigation }: any) {
             ) : (
               <Text style={styles.historyText}>Chưa có lịch tiêm phòng</Text>
             )}
-          </Card>
+          </ModernCard>
 
           <View style={styles.actions}>
             <Button
-              title="✏️ Chỉnh sửa hồ sơ"
+              title="Chỉnh sửa hồ sơ"
+              icon="create"
               onPress={() => Alert.alert('Sắp có', 'Tính năng đang phát triển')}
               fullWidth
             />
             <Button
-              title="🗑️ Xóa thú cưng"
+              title="Xóa thú cưng"
+              icon="trash"
               onPress={handleDelete}
               variant="danger"
               fullWidth
@@ -211,9 +241,6 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.lg,
     ...theme.shadow.lg,
   },
-  avatarEmoji: {
-    fontSize: 48,
-  },
   petName: {
     ...theme.typography.h1,
     color: theme.colors.textOnPrimary,
@@ -222,7 +249,6 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.textOnPrimary,
     opacity: 0.85,
-    marginTop: theme.spacing.xs,
   },
   content: {
     padding: theme.spacing.lg,
@@ -230,10 +256,15 @@ const styles = StyleSheet.create({
   infoCard: {
     marginBottom: theme.spacing.md,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
   cardTitle: {
     ...theme.typography.h4,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
@@ -265,7 +296,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.dangerBg,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: 6,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   allergyText: {
     fontSize: 13,
@@ -286,10 +317,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.sm,
-  },
-  vaccineCheck: {
-    fontSize: 18,
-    marginRight: theme.spacing.md,
   },
   vaccineInfo: {
     flex: 1,

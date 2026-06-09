@@ -39,7 +39,7 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.dateSection}>
-          <Text style={styles.sectionTitle}>📅 Chọn ngày</Text>
+          <Text style={styles.sectionTitle}>Chọn ngày</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
             <View style={styles.dateList}>
               {DAYS.map((day, index) => (
@@ -64,7 +64,7 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.timeSection}>
-          <Text style={styles.sectionTitle}>⏰ Chọn khung giờ</Text>
+          <Text style={styles.sectionTitle}>Chọn khung giờ</Text>
           <View style={styles.slotsGrid}>
             {SLOTS.map((slot) => (
               <TouchableOpacity
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   slotBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
     alignSelf: 'flex-start',
   },
   slotBadgeAvailable: {

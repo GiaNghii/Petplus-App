@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { theme } from '../utils/theme';
+import Icon from './Icon';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -28,7 +29,7 @@ export default function Logo({ size = 'md', showText = true, variant = 'default'
           backgroundColor: bgColor,
         }
       ]}>
-        <Text style={{ fontSize: dimensions.paw }}>🐾</Text>
+        <Icon name="paw" size={dimensions.paw} color={textColor} />
       </View>
       {showText && (
         <Text style={[

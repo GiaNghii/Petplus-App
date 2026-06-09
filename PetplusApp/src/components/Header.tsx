@@ -2,12 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../utils/theme';
+import Icon, { IconName } from './Icon';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
   onBack?: () => void;
-  rightIcon?: string;
+  rightIcon?: IconName;
   onRightPress?: () => void;
   showBack?: boolean;
   variant?: 'default' | 'primary' | 'transparent';
@@ -57,10 +58,11 @@ export default function Header({
             ]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={[
-              styles.iconText,
-              variant === 'primary' && { color: theme.colors.textOnPrimary }
-            ]}>←</Text>
+            <Icon
+              name="chevron-back"
+              size={24}
+              color={variant === 'primary' ? theme.colors.textOnPrimary : theme.colors.textPrimary}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -86,10 +88,11 @@ export default function Header({
             ]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={[
-              styles.iconText,
-              variant === 'primary' && { color: theme.colors.textOnPrimary }
-            ]}>{rightIcon}</Text>
+            <Icon
+              name={rightIcon}
+              size={22}
+              color={variant === 'primary' ? theme.colors.textOnPrimary : theme.colors.textPrimary}
+            />
           </TouchableOpacity>
         )}
       </View>

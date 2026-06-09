@@ -6,8 +6,9 @@ import { petService } from '../../services/firestoreService';
 import { Pet } from '../../types';
 import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
 import Header from '../../components/Header';
+import Icon from '../../components/Icon';
 
 export default function PetListScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -58,11 +59,11 @@ export default function PetListScreen({ navigation }: any) {
     );
   };
 
-  const getPetEmoji = (species: string) => {
+  const getPetIconName = (species: string) => {
     switch (species) {
-      case 'dog': return '🐕';
-      case 'cat': return '🐈';
-      default: return '🐾';
+      case 'dog': return 'paw';
+      case 'cat': return 'paw-outline';
+      default: return 'paw';
     }
   };
 
@@ -91,53 +92,59 @@ export default function PetListScreen({ navigation }: any) {
         activeOpacity={0.8}
         style={styles.petCardTouchable}
       >
-        <Card style={styles.petCard}>
+        <ModernCard style={styles.petCard}>
           <View style={styles.petHeader}>
             <View style={[
               styles.petAvatar, 
               { backgroundColor: getPetColor(item.species) + '20' }
             ]}>
-              <Text style={styles.petEmoji}>{getPetEmoji(item.species)}</Text>
+              <Icon name={getPetIconName(item.species)} size={28} color={getPetColor(item.species)} />
             </View>
             <View style={styles.petInfo}>
               <Text style={styles.petName}>{item.name}</Text>
               <Text style={styles.petBreed}>{item.breed}</Text>
               <View style={styles.petMeta}>
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaIcon}>⚖️</Text>
+                  <Icon name="medkit" size={12} color={theme.colors.textSecondary} />
                   <Text style={styles.metaText}>{item.weight}kg</Text>
                 </View>
                 <View style={styles.metaDivider} />
                 <View style={styles.metaItem}>
-                  <Text style={styles.metaIcon}>📅</Text>
+                  <Icon name="calendar" size={12} color={theme.colors.textSecondary} />
                   <Text style={styles.metaText}>{calculateAge(item.birthDate)}</Text>
                 </View>
               </View>
             </View>
-            <Text style={styles.arrow}>›</Text>
+            <Icon name="chevron-forward" size={28} color={theme.colors.textTertiary} />
           </View>
 
           {(item.medicalHistory || (item.drugAllergies && item.drugAllergies.length > 0)) && (
             <View style={styles.petTags}>
               {item.medicalHistory && (
                 <View style={[styles.tag, styles.tagWarning]}>
-                  <Text style={styles.tagTextWarning}>⚠️ Có bệnh sử</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Icon name="warning" size={11} color={theme.colors.warning} />
+                    <Text style={styles.tagTextWarning}>Có bệnh sử</Text>
+                  </View>
                 </View>
               )}
               {item.drugAllergies && item.drugAllergies.length > 0 && (
                 <View style={[styles.tag, styles.tagDanger]}>
-                  <Text style={styles.tagTextDanger}>🚫 Dị ứng {item.drugAllergies.length}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Icon name="alert-circle" size={11} color={theme.colors.danger} />
+                    <Text style={styles.tagTextDanger}>Dị ứng {item.drugAllergies.length}</Text>
+                  </View>
                 </View>
               )}
             </View>
           )}
-        </Card>
+        </ModernCard>
       </TouchableOpacity>
       <TouchableOpacity
         style={styles.deleteButton}
         onPress={() => handleDeletePet(item)}
       >
-        <Text style={styles.deleteIcon}>🗑️</Text>
+        <Icon name="trash" size={20} color={theme.colors.danger} />
       </TouchableOpacity>
     </View>
   );
@@ -148,7 +155,7 @@ export default function PetListScreen({ navigation }: any) {
         title="Thú cưng của tôi"
         subtitle={`${pets.length} thành viên trong gia đình`}
         showBack={false}
-        rightIcon="➕"
+        rightIcon="add"
         onRightPress={() => navigation.navigate('AddPet')}
       />
 
@@ -160,7 +167,9 @@ export default function PetListScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🐾</Text>
+            <View style={{ marginBottom: theme.spacing.lg }}>
+              <Icon name="paw" size={80} color={theme.colors.primary} />
+            </View>
             <Text style={styles.emptyTitle}>Chưa có thú cưng</Text>
             <Text style={styles.emptyText}>
               Thêm thú cưng đầu tiên để bắt đầu chăm sóc sức khỏe
@@ -168,7 +177,7 @@ export default function PetListScreen({ navigation }: any) {
             <Button
               title="Thêm thú cưng ngay"
               onPress={() => navigation.navigate('AddPet')}
-              icon="➕"
+              icon="add"
               style={{ marginTop: theme.spacing.lg }}
             />
           </View>
@@ -179,7 +188,7 @@ export default function PetListScreen({ navigation }: any) {
         <View style={styles.fab}>
           <Button
             title="Thêm thú cưng"
-            icon="➕"
+            icon="add"
             onPress={() => navigation.navigate('AddPet')}
             fullWidth
           />
@@ -198,9 +207,11 @@ export default function PetListScreen({ navigation }: any) {
             styles.notificationCard,
             notificationType === 'success' ? styles.notificationSuccess : styles.notificationError
           ]}>
-            <Text style={styles.notificationIcon}>
-              {notificationType === 'success' ? '✅' : '❌'}
-            </Text>
+            <Icon 
+              name={notificationType === 'success' ? 'checkmark' : 'close'} 
+              size={24} 
+              color={notificationType === 'success' ? theme.colors.success : theme.colors.danger} 
+            />
             <Text style={styles.notificationText}>{notificationMessage}</Text>
           </View>
         </View>
@@ -241,9 +252,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  petEmoji: {
-    fontSize: 32,
-  },
   petInfo: {
     flex: 1,
   },
@@ -266,9 +274,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  metaIcon: {
-    fontSize: 12,
-  },
   metaText: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
@@ -280,11 +285,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.border,
     marginHorizontal: theme.spacing.sm,
   },
-  arrow: {
-    fontSize: 28,
-    color: theme.colors.textTertiary,
-    fontWeight: '300',
-  },
   petTags: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   tagWarning: {
     backgroundColor: theme.colors.warningBg,
@@ -320,17 +320,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: theme.spacing.sm,
   },
-  deleteIcon: {
-    fontSize: 20,
-  },
   empty: {
     alignItems: 'center',
     paddingVertical: theme.spacing.huge,
     paddingHorizontal: theme.spacing.xl,
-  },
-  emptyEmoji: {
-    fontSize: 80,
-    marginBottom: theme.spacing.lg,
   },
   emptyTitle: {
     ...theme.typography.h3,
@@ -358,11 +351,11 @@ const styles = StyleSheet.create({
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: theme.spacing.lg,
     borderRadius: theme.radius.lg,
     gap: theme.spacing.md,
-    shadowColor: '#000',
+    shadowColor: theme.colors.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -376,9 +369,6 @@ const styles = StyleSheet.create({
   notificationError: {
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.danger,
-  },
-  notificationIcon: {
-    fontSize: 24,
   },
   notificationText: {
     ...theme.typography.bodyBold,

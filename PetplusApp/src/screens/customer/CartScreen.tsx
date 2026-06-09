@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { orderService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 
 const PAYMENT_METHODS = [
-  { id: 'momo', name: 'Momo QR', subtitle: 'Quét QR thanh toán', icon: '💳' },
-  { id: 'banking', name: 'Chuyển khoản', subtitle: 'Vietcombank, Techcombank...', icon: '🏦' },
-  { id: 'COD', name: 'Tiền mặt (COD)', subtitle: 'Thanh toán khi nhận hàng', icon: '💵' },
+  { id: 'momo', name: 'Momo QR', subtitle: 'Quét QR thanh toán' },
+  { id: 'banking', name: 'Chuyển khoản', subtitle: 'Vietcombank, Techcombank...' },
+  { id: 'COD', name: 'Tiền mặt (COD)', subtitle: 'Thanh toán khi nhận hàng' },
 ];
 
 const DELIVERY_OPTIONS = [
-  { id: 'delivery', name: 'Giao hàng tận nơi', subtitle: 'Trong TP.HCM', fee: 25000, icon: '🚚' },
-  { id: 'pickup', name: 'Nhận tại chi nhánh', subtitle: 'Petplus Gò Vấp', fee: 0, icon: '🏥' },
+  { id: 'delivery', name: 'Giao hàng tận nơi', subtitle: 'Trong TP.HCM', fee: 25000 },
+  { id: 'pickup', name: 'Nhận tại chi nhánh', subtitle: 'Petplus Gò Vấp', fee: 0 },
 ];
 
 export default function CartScreen({ navigation }: any) {
@@ -67,7 +68,7 @@ export default function CartScreen({ navigation }: any) {
     if (result.success) {
       const orderId = result.id?.slice(-6).toUpperCase();
       Alert.alert(
-        'Đặt hàng thành công! 🎉',
+        'Đặt hàng thành công!',
         `Mã đơn hàng: #${orderId}\n\nTổng tiền: ${finalTotal.toLocaleString('vi-VN')}đ\n\nPetplus sẽ liên hệ bạn trong ít phút!`,
         [
           { 
@@ -80,7 +81,7 @@ export default function CartScreen({ navigation }: any) {
         ]
       );
     } else {
-      Alert.alert('Lỗi', result.error || 'Không thể đặt hàng');
+      Alert.alert('Lỗi', 'Không thể đặt hàng');
     }
     setLoading(false);
   };
@@ -90,14 +91,14 @@ export default function CartScreen({ navigation }: any) {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+            <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Giỏ hàng</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIcon}>
-            <Text style={styles.emptyEmoji}>🛒</Text>
+            <Icon name="cart-outline" size={48} color={theme.colors.primary} />
           </View>
           <Text style={styles.emptyTitle}>Giỏ hàng trống</Text>
           <Text style={styles.emptyText}>
@@ -106,7 +107,7 @@ export default function CartScreen({ navigation }: any) {
           <Button
             title="Khám phá sản phẩm"
             onPress={() => navigation.goBack()}
-            icon="🛍️"
+            icon="cart"
             style={{ marginTop: theme.spacing.xl }}
           />
         </View>
@@ -118,7 +119,7 @@ export default function CartScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+          <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Giỏ hàng ({totalItems})</Text>
         <TouchableOpacity onPress={() => {
@@ -139,13 +140,18 @@ export default function CartScreen({ navigation }: any) {
         {/* Cart Items */}
         <View style={styles.section}>
           {items.map((item) => (
-            <Card key={item.product.id} style={styles.cartItem}>
+            <ModernCard key={item.product.id} style={styles.cartItem}>
               <View style={styles.cartItemHeader}>
-                <View style={[styles.productImage, { backgroundColor: item.product.imageEmoji ? theme.colors.primaryBg : theme.colors.surfaceAlt }]}>
-                  <Text style={styles.productEmoji}>📦</Text>
+                <View style={styles.productImage}>
+                  {item.product.imageUrl ? (
+                    <Image source={{ uri: item.product.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+                  ) : (
+                    <Icon name="medkit" size={28} color={theme.colors.primary} />
+                  )}
                   {item.product.type === 'prescription' && (
                     <View style={styles.prescriptionTag}>
-                      <Text style={styles.prescriptionTagText}>🔒 Kê đơn</Text>
+                      <Icon name="lock-closed" size={7} color={theme.colors.danger} />
+                      <Text style={styles.prescriptionTagText}>Kê đơn</Text>
                     </View>
                   )}
                 </View>
@@ -156,7 +162,8 @@ export default function CartScreen({ navigation }: any) {
                   </Text>
                   {item.selectedPetId && (
                     <View style={styles.petTag}>
-                      <Text style={styles.petTagText}>🐕 Kê đơn cho pet</Text>
+                      <Icon name="paw" size={10} color={theme.colors.primaryDarker} />
+                      <Text style={styles.petTagText}>Kê đơn cho pet</Text>
                     </View>
                   )}
                 </View>
@@ -164,7 +171,7 @@ export default function CartScreen({ navigation }: any) {
                   style={styles.removeBtn}
                   onPress={() => removeItem(item.product.id)}
                 >
-                  <Text style={styles.removeIcon}>🗑️</Text>
+                  <Icon name="trash" size={18} color={theme.colors.danger} />
                 </TouchableOpacity>
               </View>
 
@@ -190,13 +197,13 @@ export default function CartScreen({ navigation }: any) {
                   {(item.product.price * item.quantity).toLocaleString('vi-VN')}đ
                 </Text>
               </View>
-            </Card>
+            </ModernCard>
           ))}
         </View>
 
         {/* Delivery */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🚚 Phương thức giao hàng</Text>
+          <Text style={styles.sectionTitle}>Phương thức giao hàng</Text>
           {DELIVERY_OPTIONS.map((option) => (
             <TouchableOpacity
               key={option.id}
@@ -206,7 +213,7 @@ export default function CartScreen({ navigation }: any) {
               ]}
               onPress={() => setDeliveryType(option.id)}
             >
-              <Text style={styles.optionIcon}>{option.icon}</Text>
+              <Icon name="location" size={24} color={deliveryType === option.id ? theme.colors.primary : theme.colors.textSecondary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.optionName}>{option.name}</Text>
                 <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
@@ -221,8 +228,8 @@ export default function CartScreen({ navigation }: any) {
         {/* Address */}
         {deliveryType === 'delivery' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Địa chỉ giao hàng</Text>
-            <Card>
+            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+            <ModernCard>
               <TextInput
                 style={styles.addressInput}
                 placeholder="Nhập địa chỉ chi tiết..."
@@ -232,16 +239,16 @@ export default function CartScreen({ navigation }: any) {
                 numberOfLines={3}
               />
               <Text style={styles.addressHint}>
-                💡 Giao hàng trong TP.HCM - Giao từ chi nhánh gần nhất có hàng
+                Giao hàng trong TP.HCM - Giao từ chi nhánh gần nhất có hàng
               </Text>
-            </Card>
+            </ModernCard>
           </View>
         )}
 
         {/* Note */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📝 Ghi chú (tùy chọn)</Text>
-          <Card>
+          <Text style={styles.sectionTitle}>Ghi chú (tùy chọn)</Text>
+          <ModernCard>
             <TextInput
               style={styles.noteInput}
               placeholder="Ghi chú cho đơn hàng..."
@@ -250,12 +257,12 @@ export default function CartScreen({ navigation }: any) {
               multiline
               numberOfLines={2}
             />
-          </Card>
+          </ModernCard>
         </View>
 
         {/* Payment */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💳 Phương thức thanh toán</Text>
+          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           {PAYMENT_METHODS.map((method) => (
             <TouchableOpacity
               key={method.id}
@@ -265,14 +272,13 @@ export default function CartScreen({ navigation }: any) {
               ]}
               onPress={() => setPaymentMethod(method.id)}
             >
-              <Text style={styles.optionIcon}>{method.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.optionName}>{method.name}</Text>
                 <Text style={styles.optionSubtitle}>{method.subtitle}</Text>
               </View>
               {paymentMethod === method.id && (
                 <View style={styles.checkmark}>
-                  <Text style={styles.checkmarkText}>✓</Text>
+                  <Icon name="checkmark" size={14} color={theme.colors.textOnPrimary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -282,18 +288,18 @@ export default function CartScreen({ navigation }: any) {
         {/* Voucher placeholder */}
         <View style={styles.section}>
           <TouchableOpacity style={styles.voucherCard}>
-            <Text style={styles.voucherIcon}>🎁</Text>
+            <Icon name="pricetag" size={24} color={theme.colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.voucherTitle}>Mã giảm giá</Text>
               <Text style={styles.voucherSubtitle}>Bạn chưa có mã giảm giá</Text>
             </View>
-            <Text style={styles.voucherArrow}>›</Text>
+            <Icon name="chevron-forward" size={24} color={theme.colors.textTertiary} />
           </TouchableOpacity>
         </View>
 
         {/* Summary */}
         <View style={styles.section}>
-          <Card style={styles.summaryCard}>
+          <ModernCard style={styles.summaryCard} variant="primary">
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tạm tính ({totalItems} sản phẩm)</Text>
               <Text style={styles.summaryValue}>
@@ -313,7 +319,7 @@ export default function CartScreen({ navigation }: any) {
                 {finalTotal.toLocaleString('vi-VN')}đ
               </Text>
             </View>
-          </Card>
+          </ModernCard>
         </View>
 
         <View style={{ height: 100 }} />
@@ -333,7 +339,7 @@ export default function CartScreen({ navigation }: any) {
           disabled={loading}
         >
           <Text style={styles.checkoutButtonText}>
-            {loading ? '⏳ Đang xử lý...' : '✓ Đặt hàng ngay'}
+            {loading ? 'Đang xử lý...' : 'Đặt hàng ngay'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -356,15 +362,11 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadow.sm,
-  },
-  backIcon: {
-    fontSize: 20,
-    color: theme.colors.textPrimary,
   },
   headerTitle: {
     ...theme.typography.h4,
@@ -400,8 +402,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  productEmoji: {
-    fontSize: 28,
+  productImageThumb: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
   },
   prescriptionTag: {
     position: 'absolute',
@@ -410,7 +414,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.95)',
     paddingHorizontal: 4,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: theme.radius.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   prescriptionTagText: {
     fontSize: 7,
@@ -433,9 +440,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
     alignSelf: 'flex-start',
     marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   petTagText: {
     fontSize: 10,
@@ -444,9 +454,6 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     padding: 4,
-  },
-  removeIcon: {
-    fontSize: 18,
   },
   cartItemFooter: {
     flexDirection: 'row',
@@ -467,7 +474,7 @@ const styles = StyleSheet.create({
   qtyButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
@@ -506,10 +513,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryBg,
   },
-  optionIcon: {
-    fontSize: 24,
-    marginRight: theme.spacing.md,
-  },
   optionName: {
     ...theme.typography.bodyBold,
     color: theme.colors.textPrimary,
@@ -526,15 +529,10 @@ const styles = StyleSheet.create({
   checkmark: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkmarkText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '700',
   },
   addressInput: {
     minHeight: 60,
@@ -564,10 +562,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     ...theme.shadow.sm,
   },
-  voucherIcon: {
-    fontSize: 24,
-    marginRight: theme.spacing.md,
-  },
   voucherTitle: {
     ...theme.typography.bodyBold,
     color: theme.colors.textPrimary,
@@ -576,10 +570,6 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
     marginTop: 2,
-  },
-  voucherArrow: {
-    fontSize: 24,
-    color: theme.colors.textTertiary,
   },
   summaryCard: {
     backgroundColor: theme.colors.primaryBg,
@@ -664,14 +654,11 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
-  },
-  emptyEmoji: {
-    fontSize: 48,
   },
   emptyTitle: {
     ...theme.typography.h2,

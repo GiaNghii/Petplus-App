@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { theme } from '../../utils/theme';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
+import ModernCard from '../../components/ModernCard';
 
 export default function RegisterScreen({ navigation }: any) {
   const { register } = useAuth();
@@ -40,144 +45,120 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Tạo tài khoản</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Tạo tài khoản</Text>
+        </View>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <ModernCard style={styles.formCard} padding="xxl">
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>👤 Họ và tên</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Họ và tên"
+            icon="person"
             placeholder="Nhập họ tên"
             value={name}
             onChangeText={setName}
           />
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>📧 Email</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Email"
+            icon="mail"
             placeholder="Nhập email"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>📱 Số điện thoại</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Số điện thoại"
+            icon="call"
             placeholder="Nhập số điện thoại"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
           />
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>🔒 Mật khẩu</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Mật khẩu"
+            icon="lock-closed"
             placeholder="Nhập mật khẩu"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
-        </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>🔒 Xác nhận mật khẩu</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Xác nhận mật khẩu"
+            icon="lock-closed"
             placeholder="Nhập lại mật khẩu"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
           />
-        </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Đăng ký</Text>
-          )}
-        </TouchableOpacity>
+          <Button
+            title="Đăng ký"
+            onPress={handleRegister}
+            loading={loading}
+            disabled={loading}
+            fullWidth
+            icon="arrow-forward"
+          />
 
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.link}>Đã có tài khoản? Đăng nhập</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <Button
+            title="Đã có tài khoản? Đăng nhập"
+            variant="ghost"
+            onPress={() => navigation.navigate('Login')}
+            fullWidth
+          />
+        </ModernCard>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background,
   },
-  content: {
-    padding: 24,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
+  },
+  header: {
+    paddingHorizontal: 24,
     paddingTop: 60,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: theme.colors.primary,
     marginBottom: 24,
   },
-  error: {
-    color: '#D32F2F',
-    marginBottom: 16,
+  formCard: {
+    marginHorizontal: 20,
+  },
+  errorBox: {
+    backgroundColor: theme.colors.dangerBg,
     padding: 12,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 8,
-  },
-  inputContainer: {
+    borderRadius: theme.radius.md,
     marginBottom: 16,
   },
-  label: {
+  errorText: {
+    color: theme.colors.danger,
     fontSize: 14,
-    color: '#212121',
-    marginBottom: 8,
     fontWeight: '500',
-  },
-  input: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  button: {
-    backgroundColor: '#2E7D32',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    height: 56,
-    justifyContent: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  link: {
-    color: '#2E7D32',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 14,
   },
 });

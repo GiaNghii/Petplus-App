@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
-import Card from '../../components/Card';
+import ModernCard from '../../components/ModernCard';
+import Icon from '../../components/Icon';
 
 const BRANCHES = [
   {
@@ -42,7 +43,7 @@ export default function SelectBranchScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+          <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chọn chi nhánh</Text>
         <View style={{ width: 40 }} />
@@ -61,18 +62,18 @@ export default function SelectBranchScreen({ navigation }: any) {
             activeOpacity={0.8}
             onPress={() => setSelectedBranch(branch.id)}
           >
-            <Card style={[
-              styles.branchCard,
-              selectedBranch === branch.id && styles.branchCardSelected
-            ]}>
+            <ModernCard style={selectedBranch === branch.id ? { ...styles.branchCard, ...styles.branchCardSelected } : styles.branchCard}>
               <View style={styles.branchHeader}>
                 <View style={styles.branchIcon}>
-                  <Text style={{ fontSize: 24 }}>🏥</Text>
+                  <Icon name="medkit" size={24} color={theme.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.branchName}>{branch.name}</Text>
                   <View style={styles.ratingRow}>
-                    <Text style={styles.rating}>⭐ {branch.rating}</Text>
+                    <View style={styles.rating}>
+                      <Icon name="star" size={14} color={theme.colors.warning} />
+                      <Text style={styles.ratingText}>{branch.rating}</Text>
+                    </View>
                     <View style={styles.dot} />
                     <Text style={styles.doctorCount}>{branch.doctors} bác sĩ</Text>
                   </View>
@@ -84,25 +85,26 @@ export default function SelectBranchScreen({ navigation }: any) {
 
               <View style={styles.branchInfo}>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoIcon}>📍</Text>
+                  <Icon name="location" size={14} color={theme.colors.textSecondary} />
                   <Text style={styles.infoText}>{branch.address}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoIcon}>📞</Text>
+                  <Icon name="call" size={14} color={theme.colors.textSecondary} />
                   <Text style={styles.infoText}>{branch.phone}</Text>
                 </View>
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoIcon}>🕐</Text>
+                  <Icon name="time" size={14} color={theme.colors.textSecondary} />
                   <Text style={styles.infoText}>Mở cửa 24/7</Text>
                 </View>
               </View>
 
               {selectedBranch === branch.id && (
                 <View style={styles.selectedBadge}>
-                  <Text style={styles.selectedBadgeText}>✓ Đã chọn</Text>
+                  <Icon name="checkmark" size={12} color={theme.colors.textOnPrimary} />
+                  <Text style={styles.selectedBadgeText}>Đã chọn</Text>
                 </View>
               )}
-            </Card>
+            </ModernCard>
           </TouchableOpacity>
         ))}
 
@@ -144,10 +146,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...theme.shadow.sm,
-  },
-  backIcon: {
-    fontSize: 20,
-    color: theme.colors.textPrimary,
   },
   headerTitle: {
     ...theme.typography.h4,
@@ -208,6 +206,11 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   rating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
     ...theme.typography.smallBold,
     color: theme.colors.warning,
   },
@@ -225,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
   },
   distanceText: {
     fontSize: 11,
@@ -241,10 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    marginBottom: theme.xs || 8,
-  },
-  infoIcon: {
-    fontSize: 14,
+    marginBottom: theme.spacing.xs,
   },
   infoText: {
     ...theme.typography.small,
@@ -258,7 +258,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: theme.radius.round,
+    borderRadius: theme.radius.pill,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   selectedBadgeText: {
     color: theme.colors.textOnPrimary,
