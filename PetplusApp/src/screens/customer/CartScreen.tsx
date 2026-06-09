@@ -143,8 +143,8 @@ export default function CartScreen({ navigation }: any) {
             <ModernCard key={item.product.id} style={styles.cartItem}>
               <View style={styles.cartItemHeader}>
                 <View style={styles.productImage}>
-                  {item.product.imageUrl ? (
-                    <Image source={{ uri: item.product.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+                  {item.product.imageLocal ? (
+                    <Image source={item.product.imageLocal} style={styles.productImageThumb} resizeMode="contain" />
                   ) : (
                     <Icon name="medkit" size={28} color={theme.colors.primary} />
                   )}

@@ -65,8 +65,8 @@ export default function ShopScreen({ navigation }: any) {
     return (
       <View style={styles.productCard}>
         <View style={[styles.productImage, { backgroundColor: item.bgColor }]}>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+          {item.imageLocal ? (
+            <Image source={item.imageLocal} style={styles.productImageThumb} resizeMode="contain" />
           ) : (
             <Icon name="medkit" size={48} color={theme.colors.primaryLight} />
           )}
