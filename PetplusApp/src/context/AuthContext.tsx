@@ -2,6 +2,15 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockAuthService } from '../services/authService';
 import { User } from '../types';
 
+const DEFAULT_USER: User = {
+  id: 'demo_user',
+  name: 'Nguyễn Văn A',
+  email: 'demo@petplus.vn',
+  phone: '0901234567',
+  role: 'customer',
+  createdAt: new Date('2024-01-01'),
+};
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -23,24 +32,8 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    checkCurrentUser();
-  }, []);
-
-  const checkCurrentUser = async () => {
-    try {
-      const currentUser = await mockAuthService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-      }
-    } catch (error) {
-      console.error('Check user error:', error);
-    }
-    setLoading(false);
-  };
+  const [user, setUser] = useState<User | null>(DEFAULT_USER);
+  const [loading, setLoading] = useState(false);
 
   const login = async (email: string, password: string) => {
     const result = await mockAuthService.login(email, password);

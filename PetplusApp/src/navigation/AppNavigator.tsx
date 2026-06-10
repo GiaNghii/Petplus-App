@@ -102,6 +102,14 @@ function CustomerTabNavigator() {
         }}
       />
       <Tab.Screen
+        name="ShopTab"
+        component={ShopScreen}
+        options={{
+          title: 'Shop',
+          tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'cart' : 'cart-outline'} focused={focused} />,
+        }}
+      />
+      <Tab.Screen
         name="ProfileTab"
         component={ProfileScreen}
         options={{
