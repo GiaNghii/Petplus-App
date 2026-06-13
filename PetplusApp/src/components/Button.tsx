@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, Animated, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, ActivityIndicator } from 'react-native';
 import { theme } from '../utils/theme';
 import Icon, { IconName } from './Icon';
 
@@ -26,26 +26,6 @@ export default function Button({
   style,
   fullWidth = false,
 }: ButtonProps) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 300,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 300,
-    }).start();
-  };
-
   const getBackgroundColor = () => {
     if (disabled || loading) return theme.colors.borderLight;
     switch (variant) {
@@ -89,45 +69,38 @@ export default function Button({
   const isPill = variant === 'primary' || variant === 'danger';
 
   return (
-    <Animated.View
+    <TouchableOpacity
       style={[
-        { transform: [{ scale: scaleAnim }], width: fullWidth ? '100%' : 'auto' },
+        styles.button,
+        getPadding(),
+        {
+          backgroundColor: getBackgroundColor(),
+          borderWidth: variant === 'outline' ? 1.5 : 0,
+          borderColor: variant === 'outline' ? theme.colors.primary : 'transparent',
+          borderRadius: isPill ? theme.radius.pill : theme.radius.lg,
+          opacity: disabled ? 0.6 : 1,
+          width: fullWidth ? '100%' : 'auto',
+        },
+        style,
       ]}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
     >
-      <TouchableOpacity
-        style={[
-          styles.button,
-          getPadding(),
-          {
-            backgroundColor: getBackgroundColor(),
-            borderWidth: variant === 'outline' ? 1.5 : 0,
-            borderColor: variant === 'outline' ? theme.colors.primary : 'transparent',
-            borderRadius: isPill ? theme.radius.pill : theme.radius.lg,
-            opacity: disabled ? 0.6 : 1,
-          },
-          style,
-        ]}
-        onPress={onPress}
-        disabled={disabled || loading}
-        activeOpacity={0.8}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-      >
-        {loading ? (
-          <ActivityIndicator color={getTextColor()} size="small" />
-        ) : (
-          <>
-            {icon && <Icon name={icon} size={getFontSize() + 4} color={getTextColor()} style={{ marginRight: 8 }} />}
-            <Text style={[
-              styles.text,
-              { color: getTextColor(), fontSize: getFontSize() }
-            ]}>
-              {title}
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </Animated.View>
+      {loading ? (
+        <ActivityIndicator color={getTextColor()} size="small" />
+      ) : (
+        <>
+          {icon && <Icon name={icon} size={getFontSize() + 4} color={getTextColor()} style={{ marginRight: 8 }} />}
+          <Text style={[
+            styles.text,
+            { color: getTextColor(), fontSize: getFontSize() }
+          ]}>
+            {title}
+          </Text>
+        </>
+      )}
+    </TouchableOpacity>
   );
 }
 

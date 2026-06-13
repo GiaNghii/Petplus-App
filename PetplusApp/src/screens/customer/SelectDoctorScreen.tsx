@@ -1,20 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
-
-const DOCTORS = [
-  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', rating: 4.9, reviews: 128, patients: 2 },
-  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', rating: 4.8, reviews: 96, patients: 1 },
-  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', rating: 4.7, reviews: 64, patients: 3 },
-];
+import { DOCTORS } from '../../data/doctors';
 
 export default function SelectDoctorScreen({ route, navigation }: any) {
-  const { branchId } = route.params;
+  const { branchId, petId, petName } = route.params;
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null);
   const [autoAssign, setAutoAssign] = useState(false);
 
@@ -69,7 +64,7 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
           >
             <ModernCard style={selectedDoctor === doctor.id ? { ...styles.doctorCard, ...styles.doctorCardSelected } : styles.doctorCard}>
               <View style={styles.doctorAvatar}>
-                <Icon name="person" size={32} color={theme.colors.primary} />
+                <Image source={{ uri: doctor.imageUrl }} style={styles.doctorImage} />
               </View>
               <View style={styles.doctorInfo}>
                 <Text style={styles.doctorName}>{doctor.name}</Text>
@@ -102,7 +97,9 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
               if (selectedDoctor || autoAssign) {
                 navigation.navigate('SelectTimeSlot', { 
                   branchId, 
-                  doctorId: selectedDoctor || 'auto' 
+                  doctorId: selectedDoctor || 'auto',
+                  petId,
+                  petName,
                 });
               }
             }}
@@ -195,6 +192,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  doctorImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   doctorInfo: {
     flex: 1,

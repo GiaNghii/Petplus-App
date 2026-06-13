@@ -16,10 +16,26 @@ const SLOTS = [
   { time: '21:00 - 23:00', available: 3, total: 3 },
 ];
 
-const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const DAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+const generateDates = () => {
+  const dates: { label: string; dateStr: string; display: string }[] = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    dates.push({
+      label: DAY_LABELS[d.getDay()],
+      dateStr: d.toISOString(),
+      display: d.toLocaleDateString('vi-VN'),
+    });
+  }
+  return dates;
+};
+
+const DATES = generateDates();
 
 export default function SelectTimeSlotScreen({ route, navigation }: any) {
-  const { branchId, doctorId } = route.params;
+  const { branchId, doctorId, petId, petName } = route.params;
   const [selectedDate, setSelectedDate] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
@@ -42,9 +58,9 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
           <Text style={styles.sectionTitle}>Chọn ngày</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} showsVerticalScrollIndicator={false}>
             <View style={styles.dateList}>
-              {DAYS.map((day, index) => (
+              {DATES.map((dateItem, index) => (
                 <TouchableOpacity
-                  key={day}
+                  key={index}
                   style={[
                     styles.dateButton,
                     selectedDate === index && styles.dateButtonSelected,
@@ -52,10 +68,10 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
                   onPress={() => setSelectedDate(index)}
                 >
                   <Text style={[styles.dateText, selectedDate === index && styles.dateTextSelected]}>
-                    {day}
+                    {dateItem.label}
                   </Text>
                   <Text style={[styles.dateNumber, selectedDate === index && styles.dateTextSelected]}>
-                    {6 + index}
+                    {new Date(dateItem.dateStr).getDate()}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -123,11 +139,15 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
           title="Xác nhận đặt lịch"
           onPress={() => {
             if (selectedSlot) {
+              const selected = DATES[selectedDate];
               navigation.navigate('BookingConfirmation', {
                 branchId,
                 doctorId,
-                date: DAYS[selectedDate],
+                date: selected.dateStr,
+                dateDisplay: selected.display,
                 slot: selectedSlot,
+                petId,
+                petName,
               });
             }
           }}

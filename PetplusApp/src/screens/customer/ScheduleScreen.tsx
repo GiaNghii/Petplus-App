@@ -1,24 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
-import { appointmentService } from '../../services/firestoreService';
+import { appointmentService, petService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
+import { Appointment, Pet } from '../../types';
 import Header from '../../components/Header';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
 import Button from '../../components/Button';
+import { DOCTOR_NAMES } from '../../data/doctors';
 
 const BRANCHES: Record<string, string> = {
   'go-vap': 'Petplus Gò Vấp',
   'quan-11': 'Petplus Quận 11',
   'quan-12': 'Petplus Quận 12',
-};
-
-const DOCTORS: Record<string, string> = {
-  'dr-a': 'BS. Nguyễn Văn A',
-  'dr-b': 'BS. Trần Thị B',
-  'dr-c': 'BS. Lê Văn C',
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -28,77 +25,148 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   cancelled: { label: 'Đã hủy', color: theme.colors.danger, bg: theme.colors.dangerBg },
 };
 
-const SAMPLE_APPOINTMENTS = [
-  {
-    id: 'apt_1',
-    branchId: 'go-vap',
-    doctorId: 'dr-a',
-    petName: 'Buddy',
-    dateTime: new Date('2026-06-10T10:00:00'),
-    slot: '10:00 - 12:00',
-    status: 'confirmed',
-    service: 'Khám tổng quát',
-  },
-  {
-    id: 'apt_2',
-    branchId: 'quan-11',
-    doctorId: 'dr-b',
-    petName: 'Mèo',
-    dateTime: new Date('2026-06-15T14:00:00'),
-    slot: '14:00 - 16:00',
-    status: 'pending',
-    service: 'Tiêm phòng',
-  },
-  {
-    id: 'apt_3',
-    branchId: 'go-vap',
-    doctorId: 'dr-a',
-    petName: 'Buddy',
-    dateTime: new Date('2026-05-20T09:00:00'),
-    slot: '09:00 - 11:00',
-    status: 'completed',
-    service: 'Siêu âm',
-  },
-];
+
 
 export default function ScheduleScreen({ navigation }: any) {
   const { user } = useAuth();
-  const [appointments, setAppointments] = useState<any[]>(SAMPLE_APPOINTMENTS);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [pets, setPets] = useState<Pet[]>([]);
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingApt, setEditingApt] = useState<Appointment | null>(null);
+  const [editForm, setEditForm] = useState({ branchId: '', doctorId: '', slot: '', service: '', notes: '' });
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingApt, setCancellingApt] = useState<Appointment | null>(null);
+  const loadingRef = React.useRef(false);
 
-  const upcoming = appointments.filter(a => a.status === 'pending' || a.status === 'confirmed');
-  const history = appointments.filter(a => a.status === 'completed' || a.status === 'cancelled');
+  const loadAppointments = useCallback(async () => {
+    if (!user?.id || loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+    const [aptResult, petResult] = await Promise.all([
+      appointmentService.getAppointmentsByCustomer(user.id),
+      petService.getPetsByOwner(user.id),
+    ]);
+    if (petResult.success && petResult.pets) {
+      setPets(petResult.pets);
+    }
+    if (aptResult.success && aptResult.appointments) {
+      const now = new Date();
+      let data = aptResult.appointments;
+      let needsSave = false;
+      for (const apt of data) {
+        if (
+          (apt.status === 'pending' || apt.status === 'confirmed') &&
+          new Date(apt.dateTime) < now
+        ) {
+          await appointmentService.updateAppointmentStatus(apt.id, 'completed');
+          apt.status = 'completed';
+          needsSave = true;
+        }
+      }
+      if (needsSave) {
+        const refreshed = await appointmentService.getAppointmentsByCustomer(user.id);
+        if (refreshed.success && refreshed.appointments) {
+          data = refreshed.appointments;
+        }
+      }
+      data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+      setAppointments(data);
+    }
+    } finally {
+      loadingRef.current = false;
+    }
+  }, [user?.id]);
 
-  const handleCancel = (apt: any) => {
-    Alert.alert(
-      'Hủy lịch hẹn?',
-      `Bạn có chắc muốn hủy lịch khám của ${apt.petName} vào ${apt.slot}?`,
-      [
-        { text: 'Không', style: 'cancel' },
-        {
-          text: 'Hủy lịch',
-          style: 'destructive',
-          onPress: () => {
-            setAppointments(prev =>
-              prev.map(a => a.id === apt.id ? { ...a, status: 'cancelled' } : a)
-            );
-            Alert.alert('Đã hủy', `Lịch khám của ${apt.petName} đã được hủy`);
-          },
-        },
-      ]
-    );
+  useFocusEffect(
+    useCallback(() => {
+      loadAppointments();
+    }, [loadAppointments])
+  );
+
+  const upcoming = appointments.filter(
+    a => (a.status === 'pending' || a.status === 'confirmed') && new Date(a.dateTime) >= new Date()
+  );
+  const history = appointments.filter(
+    a => a.status === 'completed' || a.status === 'cancelled' || new Date(a.dateTime) < new Date()
+  );
+
+  const getPetName = (petId: string) => {
+    return pets.find(p => p.id === petId)?.name || 'Chưa có pet';
   };
 
-  const renderAppointment = (apt: any) => {
+  const handleCancel = (apt: Appointment) => {
+    setCancellingApt(apt);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!cancellingApt) return;
+    const result = await appointmentService.updateAppointmentStatus(cancellingApt.id, 'cancelled');
+    if (result.success) {
+      setAppointments(prev =>
+        prev.map(a => a.id === cancellingApt.id ? { ...a, status: 'cancelled' as const } : a)
+      );
+    }
+    setShowCancelModal(false);
+    setCancellingApt(null);
+  };
+
+  const openEditModal = (apt: Appointment) => {
+    setEditingApt(apt);
+    setEditForm({
+      branchId: apt.branchId,
+      doctorId: apt.doctorId,
+      slot: apt.slot,
+      service: apt.notes || '',
+      notes: apt.notes || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmSave = async () => {
+    if (!editingApt) return;
+    const result = await appointmentService.updateAppointment(editingApt.id, {
+      branchId: editForm.branchId,
+      doctorId: editForm.doctorId,
+      slot: editForm.slot,
+      notes: editForm.notes,
+    });
+    if (result.success) {
+      setAppointments(prev =>
+        prev.map(a =>
+          a.id === editingApt.id
+            ? { ...a, ...editForm, updatedAt: new Date() }
+            : a
+        )
+      );
+    }
+    setShowConfirm(false);
+    setShowEditModal(false);
+    setEditingApt(null);
+  };
+
+  const cancelSave = () => {
+    setShowConfirm(false);
+    setShowEditModal(false);
+  };
+
+  const renderAppointment = (apt: Appointment) => {
     const status = STATUS_CONFIG[apt.status];
-    const date = apt.dateTime?.toLocaleDateString?.('vi-VN') || 'dd/mm/yyyy';
-    
+    const date = new Date(apt.dateTime).toLocaleDateString('vi-VN');
+    const petName = getPetName(apt.petId);
+
     return (
       <ModernCard key={apt.id} style={styles.appointmentCard}>
         <View style={styles.aptHeader}>
           <View style={styles.aptPet}>
             <Icon name="paw" size={24} color={theme.colors.primary} />
-            <Text style={styles.aptPetName}>{apt.petName}</Text>
+            <Text style={styles.aptPetName}>{petName}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
@@ -112,16 +180,18 @@ export default function ScheduleScreen({ navigation }: any) {
           </View>
           <View style={styles.aptDetailRow}>
             <Icon name="medical" size={16} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{DOCTORS[apt.doctorId]}</Text>
+            <Text style={styles.detailText}>{DOCTOR_NAMES[apt.doctorId]}</Text>
           </View>
           <View style={styles.aptDetailRow}>
             <Icon name="calendar" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>{date} • {apt.slot}</Text>
           </View>
-          <View style={styles.aptDetailRow}>
-            <Icon name="medkit" size={16} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{apt.service}</Text>
-          </View>
+          {apt.notes ? (
+            <View style={styles.aptDetailRow}>
+              <Icon name="medkit" size={16} color={theme.colors.textSecondary} />
+              <Text style={styles.detailText}>{apt.notes}</Text>
+            </View>
+          ) : null}
         </View>
 
         {apt.status === 'pending' || apt.status === 'confirmed' ? (
@@ -132,8 +202,11 @@ export default function ScheduleScreen({ navigation }: any) {
             >
               <Text style={styles.cancelButtonText}>Hủy lịch</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.detailButton]}>
-              <Text style={styles.detailButtonText}>Chi tiết</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.detailButton]}
+              onPress={() => openEditModal(apt)}
+            >
+              <Text style={styles.detailButtonText}>Chỉnh sửa</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -154,7 +227,14 @@ export default function ScheduleScreen({ navigation }: any) {
         subtitle={`${upcoming.length} lịch sắp tới`}
         showBack={false}
         rightIcon="add"
-        onRightPress={() => navigation.navigate('SelectBranch')}
+        onRightPress={() => {
+          if (pets.length > 0) {
+            navigation.navigate('SelectBranch', {
+              petId: pets[0].id,
+              petName: pets[0].name,
+            });
+          }
+        }}
       />
 
       <View style={styles.tabs}>
@@ -187,7 +267,14 @@ export default function ScheduleScreen({ navigation }: any) {
               <Text style={styles.emptyText}>Đặt lịch khám cho thú cưng của bạn</Text>
               <Button
                 title="Đặt lịch ngay"
-                onPress={() => navigation.navigate('SelectBranch')}
+                onPress={() => {
+                  if (pets.length > 0) {
+                    navigation.navigate('SelectBranch', {
+                      petId: pets[0].id,
+                      petName: pets[0].name,
+                    });
+                  }
+                }}
                 icon="add"
                 style={{ marginTop: theme.spacing.lg }}
               />
@@ -205,6 +292,169 @@ export default function ScheduleScreen({ navigation }: any) {
           )
         )}
       </ScrollView>
+
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => { setShowCancelModal(false); setCancellingApt(null); }}
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalCard}>
+            <Text style={styles.cancelModalTitle}>Bạn có chắc muốn hủy lịch?</Text>
+            {cancellingApt && (
+              <Text style={styles.cancelModalSubtitle}>
+                {getPetName(cancellingApt.petId)} • {cancellingApt.slot}
+              </Text>
+            )}
+            <View style={styles.cancelModalActions}>
+              <TouchableOpacity
+                style={[styles.cancelModalBtn, styles.cancelModalNo]}
+                onPress={() => { setShowCancelModal(false); setCancellingApt(null); }}
+              >
+                <Text style={styles.cancelModalNoText}>Không</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelModalBtn, styles.cancelModalYes]}
+                onPress={confirmCancel}
+              >
+                <Text style={styles.cancelModalYesText}>Có</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setShowEditModal(false); setShowConfirm(false); }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+
+            {showConfirm ? (
+              <>
+                <Text style={styles.modalTitle}>Xác nhận thay đổi</Text>
+                <Text style={styles.confirmMessage}>
+                  Lịch sẽ được cập nhật và cần có sự đồng ý của bác sĩ
+                </Text>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalCancelButton]}
+                    onPress={cancelSave}
+                  >
+                    <Text style={styles.modalCancelText}>Hủy thay đổi</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalSaveButton]}
+                    onPress={confirmSave}
+                  >
+                    <Text style={styles.modalSaveText}>Đồng ý</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+            <Text style={styles.modalTitle}>Chỉnh sửa lịch hẹn</Text>
+            {editingApt && (
+              <Text style={styles.modalSubtitle}>
+                {getPetName(editingApt.petId)} • {new Date(editingApt.dateTime).toLocaleDateString('vi-VN')}
+              </Text>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalForm}>
+              <Text style={styles.fieldLabel}>Chi nhánh</Text>
+              <View style={styles.optionRow}>
+                {Object.entries(BRANCHES).map(([key, label]) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.optionChip, editForm.branchId === key && styles.optionChipActive]}
+                    onPress={() => setEditForm(prev => ({ ...prev, branchId: key }))}
+                  >
+                    <Text style={[styles.optionChipText, editForm.branchId === key && styles.optionChipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.fieldLabel}>Bác sĩ</Text>
+              <View style={styles.optionRow}>
+                {Object.entries(DOCTOR_NAMES).filter(([key]) => key !== 'auto').map(([key, label]) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.optionChip, editForm.doctorId === key && styles.optionChipActive]}
+                    onPress={() => setEditForm(prev => ({ ...prev, doctorId: key }))}
+                  >
+                    <Text style={[styles.optionChipText, editForm.doctorId === key && styles.optionChipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.fieldLabel}>Khung giờ</Text>
+              <View style={styles.optionRow}>
+                {['08:00 - 10:00', '10:00 - 12:00', '13:00 - 15:00', '15:00 - 17:00'].map(slot => (
+                  <TouchableOpacity
+                    key={slot}
+                    style={[styles.optionChip, editForm.slot === slot && styles.optionChipActive]}
+                    onPress={() => setEditForm(prev => ({ ...prev, slot }))}
+                  >
+                    <Text style={[styles.optionChipText, editForm.slot === slot && styles.optionChipTextActive]}>
+                      {slot}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.fieldLabel}>Dịch vụ</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={editForm.service}
+                onChangeText={text => setEditForm(prev => ({ ...prev, service: text }))}
+                placeholder="Nhập dịch vụ khám"
+                placeholderTextColor={theme.colors.textDisabled}
+              />
+
+              <Text style={styles.fieldLabel}>Ghi chú</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextArea]}
+                value={editForm.notes}
+                onChangeText={text => setEditForm(prev => ({ ...prev, notes: text }))}
+                placeholder="Ghi chú thêm cho bác sĩ"
+                placeholderTextColor={theme.colors.textDisabled}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => { setShowEditModal(false); setShowConfirm(false); }}
+              >
+                <Text style={styles.modalCancelText}>Hủy thay đổi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.modalSaveText}>Lưu thay đổi</Text>
+              </TouchableOpacity>
+            </View>
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -330,5 +580,177 @@ const styles = StyleSheet.create({
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.xxl,
+    borderTopRightRadius: theme.radius.xxl,
+    paddingHorizontal: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxxl,
+    maxHeight: '85%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+    alignSelf: 'center',
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.textPrimary,
+  },
+  modalSubtitle: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
+  },
+  confirmMessage: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    lineHeight: 24,
+  },
+  modalForm: {
+    flexGrow: 0,
+  },
+  fieldLabel: {
+    ...theme.typography.smallBold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  optionChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderLight,
+  },
+  optionChipActive: {
+    backgroundColor: theme.colors.primaryBg,
+    borderColor: theme.colors.primary,
+  },
+  optionChipText: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+  },
+  optionChipTextActive: {
+    color: theme.colors.primaryDarker,
+    fontWeight: '600',
+  },
+  modalInput: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderLight,
+  },
+  modalTextArea: {
+    minHeight: 80,
+    paddingTop: theme.spacing.md,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xl,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: theme.radius.pill,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderLight,
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  modalSaveButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  modalSaveText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+  },
+  cancelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  cancelModalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xxl,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  cancelModalTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  cancelModalSubtitle: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  cancelModalActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.xl,
+    width: '100%',
+  },
+  cancelModalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: theme.radius.pill,
+    alignItems: 'center',
+  },
+  cancelModalNo: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderLight,
+  },
+  cancelModalNoText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  cancelModalYes: {
+    backgroundColor: theme.colors.danger,
+  },
+  cancelModalYesText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
   },
 });

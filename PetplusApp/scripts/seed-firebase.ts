@@ -1,4 +1,16 @@
-export interface Product {
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyByXeEwZcMWcq9KcqYHXMZhOFmkLpVifr4',
+  authDomain: 'petplus-af32a.firebaseapp.com',
+  projectId: 'petplus-af32a',
+  storageBucket: 'petplus-af32a.firebasestorage.app',
+  messagingSenderId: '483533409468',
+  appId: '1:483533409468:web:98ae0ddee2fde6265c14b9',
+};
+
+interface SeedProduct {
   id: string;
   name: string;
   price: number;
@@ -7,8 +19,6 @@ export interface Product {
   category: 'thuoc' | 'thucan' | 'phukien' | 'spa';
   description: string;
   imageEmoji: string;
-  imageUrl?: string;
-  imageLocal?: any;
   bgColor: string;
   stock: number;
   rating: number;
@@ -20,8 +30,7 @@ export interface Product {
   discount?: number;
 }
 
-export const PRODUCTS: Product[] = [
-  // Thuốc cho thú cưng (10)
+const PRODUCTS: SeedProduct[] = [
   {
     id: 'p1',
     name: 'Thuốc Bổ Giúp Chó Tăng Cường Trao đổi Chất VEGEBRAND Trade Mineral',
@@ -30,7 +39,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Thuốc bổ giúp chó tăng cường trao đổi chất, bổ sung khoáng chất thiết yếu.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p1.jpg'),
     bgColor: '#FFFFFF',
     stock: 50,
     rating: 4.8,
@@ -47,7 +55,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Vitamin tổng hợp chiết xuất trái cây, giúp chó khỏe mạnh, lông bóng.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p2.jpg'),
     bgColor: '#FFFFFF',
     stock: 45,
     rating: 4.7,
@@ -64,7 +71,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Hỗ trợ xương khớp chắc khỏe, phòng ngừa thoái hóa khớp ở chó già.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p3.jpg'),
     bgColor: '#FFFFFF',
     stock: 35,
     rating: 4.9,
@@ -80,7 +86,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Bổ sung canxi và magie, giúp xương răng chắc khỏe cho chó mọi lứa tuổi.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p4.jpg'),
     bgColor: '#FFFFFF',
     stock: 40,
     rating: 4.6,
@@ -96,7 +101,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Dưỡng lông óng mượt, giảm rụng lông với chiết xuất sữa ong chúa.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p5.jpg'),
     bgColor: '#FFFFFF',
     stock: 40,
     rating: 4.7,
@@ -113,7 +117,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Công thức chuyên biệt cho chó Poodle, giúp lông xoăn bóng mượt.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p6.jpg'),
     bgColor: '#FFFFFF',
     stock: 25,
     rating: 4.8,
@@ -129,7 +132,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Giảm rụng lông hiệu quả với thành phần lecithin và vitamin E.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p7.jpg'),
     bgColor: '#FFFFFF',
     stock: 30,
     rating: 4.6,
@@ -145,7 +147,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Thuốc tẩy giun phổ rộng cho chó. Cần kê đơn và hướng dẫn của bác sĩ thú y.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p8.jpg'),
     bgColor: '#FFFFFF',
     stock: 20,
     rating: 4.9,
@@ -161,7 +162,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Thuốc xổ giun an toàn cho mèo. Chỉ dùng theo chỉ định của bác sĩ.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p9.jpg'),
     bgColor: '#FFFFFF',
     stock: 20,
     rating: 4.9,
@@ -177,7 +177,6 @@ export const PRODUCTS: Product[] = [
     category: 'thuoc',
     description: 'Xịt trị ve rận, bọ chét hiệu quả cho chó mèo. Bảo vệ lên đến 4 tuần.',
     imageEmoji: '💊',
-    imageLocal: require('../../assets/products/p10.jpg'),
     bgColor: '#FFFFFF',
     stock: 35,
     rating: 4.7,
@@ -185,7 +184,6 @@ export const PRODUCTS: Product[] = [
     sold: 245,
     unit: 'chai',
   },
-  // Thức ăn (8)
   {
     id: 'p11',
     name: 'Thức ăn Cho Chó Shiba Inu MKB All Life Stages Formula Nutrition',
@@ -194,7 +192,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Thức ăn hạt cao cấp dành riêng cho chó Shiba Inu mọi lứa tuổi.',
     imageEmoji: '🍖',
-    imageLocal: require('../../assets/products/p11.jpg'),
     bgColor: '#FFFFFF',
     stock: 30,
     rating: 4.9,
@@ -211,7 +208,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Công thức dinh dưỡng đặc biệt cho chó con cỡ nhỏ dưới 10 tháng tuổi.',
     imageEmoji: '🍖',
-    imageLocal: require('../../assets/products/p12.jpg'),
     bgColor: '#FFFFFF',
     stock: 50,
     rating: 4.8,
@@ -228,7 +224,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Dinh dưỡng toàn diện cho mèo con từ 4-12 tháng tuổi.',
     imageEmoji: '🍖',
-    imageLocal: require('../../assets/products/p13.jpg'),
     bgColor: '#FFFFFF',
     stock: 45,
     rating: 4.9,
@@ -245,7 +240,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Giảm mùi phân, kiểm soát cân nặng cho mèo trưởng thành ở trong nhà.',
     imageEmoji: '🍖',
-    imageLocal: require('../../assets/products/p14.jpg'),
     bgColor: '#FFFFFF',
     stock: 35,
     rating: 4.7,
@@ -261,7 +255,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Pate thơm ngon vị thịt bò, bổ sung dinh dưỡng cho chó mỗi ngày.',
     imageEmoji: '🥫',
-    imageLocal: require('../../assets/products/p15.jpg'),
     bgColor: '#FFFFFF',
     stock: 80,
     rating: 4.8,
@@ -277,7 +270,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Pate cao cấp vị cá ngừ và cá chạch trắng, mèo cực kỳ yêu thích.',
     imageEmoji: '🥫',
-    imageLocal: require('../../assets/products/p16.jpg'),
     bgColor: '#FFFFFF',
     stock: 100,
     rating: 4.9,
@@ -293,7 +285,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Pate mèo vị cá ngừ thanh cua, nguồn protein dồi dào, dễ tiêu hóa.',
     imageEmoji: '🥫',
-    imageLocal: require('../../assets/products/p17.jpg'),
     bgColor: '#FFFFFF',
     stock: 60,
     rating: 4.6,
@@ -309,7 +300,6 @@ export const PRODUCTS: Product[] = [
     category: 'thucan',
     description: 'Bánh thưởng thơm miệng, giúp chó sạch răng và giải trí.',
     imageEmoji: '🍖',
-    imageLocal: require('../../assets/products/p18.jpg'),
     bgColor: '#FFFFFF',
     stock: 70,
     rating: 4.5,
@@ -317,7 +307,6 @@ export const PRODUCTS: Product[] = [
     sold: 432,
     unit: 'gói 100g',
   },
-  // Phụ kiện (6)
   {
     id: 'p19',
     name: 'Balo đựng Chó Mèo Phi Hành Gia LOFFE Outdoor Transparent',
@@ -326,7 +315,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Balo phi hành gia trong suốt, thoáng khí, thời trang cho thú cưng.',
     imageEmoji: '🎒',
-    imageLocal: require('../../assets/products/p19.jpg'),
     bgColor: '#FFFFFF',
     stock: 15,
     rating: 4.8,
@@ -343,7 +331,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Chuồng sắt cao cấp Nhật Bản, mái chóp chắc chắn, dễ vệ sinh.',
     imageEmoji: '🏠',
-    imageLocal: require('../../assets/products/p20.jpg'),
     bgColor: '#FFFFFF',
     stock: 8,
     rating: 4.9,
@@ -359,7 +346,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Nệm êm ái, chất liệu cao cấp, phù hợp cho chó mèo nghỉ ngơi.',
     imageEmoji: '🛏️',
-    imageLocal: require('../../assets/products/p21.jpg'),
     bgColor: '#FFFFFF',
     stock: 20,
     rating: 4.7,
@@ -375,7 +361,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Đồ chơi bông mềm mại, có tiếng kêu vui nhộn, an toàn cho thú cưng.',
     imageEmoji: '🧸',
-    imageLocal: require('../../assets/products/p22.jpg'),
     bgColor: '#FFFFFF',
     stock: 25,
     rating: 4.6,
@@ -391,7 +376,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Nhà cây cho mèo nhiều tầng, có trụ cào móng, nghỉ ngơi và vui chơi.',
     imageEmoji: '🌳',
-    imageLocal: require('../../assets/products/p23.jpg'),
     bgColor: '#FFFFFF',
     stock: 5,
     rating: 4.9,
@@ -407,7 +391,6 @@ export const PRODUCTS: Product[] = [
     category: 'phukien',
     description: 'Nệm hình chữ nhật cao cấp, lót cotton êm ái, dễ giặt sạch.',
     imageEmoji: '🛏️',
-    imageLocal: require('../../assets/products/p24.jpg'),
     bgColor: '#FFFFFF',
     stock: 18,
     rating: 4.5,
@@ -417,10 +400,21 @@ export const PRODUCTS: Product[] = [
   },
 ];
 
-export const CATEGORIES = [
-  { id: 'all', name: 'Tất cả', emoji: '🛍️' },
-  { id: 'thuoc', name: 'Thuốc', emoji: '💊' },
-  { id: 'thucan', name: 'Thức ăn', emoji: '🍖' },
-  { id: 'phukien', name: 'Phụ kiện', emoji: '🪮' },
-  { id: 'spa', name: 'Spa', emoji: '🛁' },
-];
+async function seed() {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  console.log('Seeding 24 products to Firestore...\n');
+
+  for (const product of PRODUCTS) {
+    await setDoc(doc(db, 'products', product.id), product);
+    console.log(`OK  p${product.id.replace('p', '')}: ${product.name.substring(0, 50)}...`);
+  }
+
+  console.log(`\nDone! ${PRODUCTS.length} products seeded to Firestore.`);
+}
+
+seed().catch((err) => {
+  console.error('Seed failed:', err);
+  process.exit(1);
+});

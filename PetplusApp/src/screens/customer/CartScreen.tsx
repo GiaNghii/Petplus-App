@@ -67,19 +67,23 @@ export default function CartScreen({ navigation }: any) {
 
     if (result.success) {
       const orderId = result.id?.slice(-6).toUpperCase();
-      Alert.alert(
-        'Đặt hàng thành công!',
-        `Mã đơn hàng: #${orderId}\n\nTổng tiền: ${finalTotal.toLocaleString('vi-VN')}đ\n\nPetplus sẽ liên hệ bạn trong ít phút!`,
-        [
-          { 
-            text: 'Xem đơn hàng', 
-            onPress: () => {
-              clearCart();
-              navigation.navigate('Orders');
-            }
-          },
-        ]
-      );
+      const orderData = {
+        orderId,
+        items: items.map(item => ({
+          productName: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price,
+          type: item.product.type,
+        })),
+        totalAmount,
+        deliveryFee,
+        paymentMethod,
+        deliveryType,
+        deliveryAddress: deliveryType === 'delivery' ? address : 'Nhận tại chi nhánh',
+        status: 'pending',
+      };
+      clearCart();
+      navigation.navigate('OrderConfirmation', { orderData });
     } else {
       Alert.alert('Lỗi', 'Không thể đặt hàng');
     }
@@ -143,7 +147,9 @@ export default function CartScreen({ navigation }: any) {
             <ModernCard key={item.product.id} style={styles.cartItem}>
               <View style={styles.cartItemHeader}>
                 <View style={styles.productImage}>
-                  {item.product.imageLocal ? (
+                  {item.product.imageUrl ? (
+                    <Image source={{ uri: item.product.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+                  ) : item.product.imageLocal ? (
                     <Image source={item.product.imageLocal} style={styles.productImageThumb} resizeMode="contain" />
                   ) : (
                     <Icon name="medkit" size={28} color={theme.colors.primary} />

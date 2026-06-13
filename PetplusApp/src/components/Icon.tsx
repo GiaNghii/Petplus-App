@@ -46,12 +46,16 @@ export type IconName =
   | 'trash'
   | 'create'
   | 'arrow-forward'
+  | 'arrow-back'
   | 'arrow-down'
   | 'flash'
   | 'pricetag'
   | 'information-circle'
   | 'warning'
-  | 'alert-circle';
+  | 'alert-circle'
+  | 'water'
+  | 'image'
+  | 'camera';
 
 interface IconProps {
   name: IconName;
@@ -103,12 +107,16 @@ const ioniconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   trash: 'trash',
   create: 'create',
   'arrow-forward': 'arrow-forward',
+  'arrow-back': 'arrow-back',
   'arrow-down': 'arrow-down',
   flash: 'flash',
   pricetag: 'pricetag',
   'information-circle': 'information-circle',
   warning: 'warning',
   'alert-circle': 'alert-circle',
+  water: 'water',
+  image: 'image',
+  camera: 'camera',
 };
 
 export default function Icon({ name, size = 24, color = theme.colors.textPrimary, style }: IconProps) {

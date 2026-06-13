@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { petService } from '../../services/firestoreService';
 import { Pet } from '../../types';
 import { theme } from '../../utils/theme';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../../components/Icon';
-
-const DOCTORS = [
-  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', rating: 4.9, status: 'online' },
-  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', rating: 4.8, status: 'busy' },
-  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', rating: 4.7, status: 'online' },
-  { id: 'dr-d', name: 'BS. Phạm Thị D', specialty: 'Răng hàm mặt', rating: 4.6, status: 'online' },
-  { id: 'dr-e', name: 'BS. Hoàng Văn E', specialty: 'Tim mạch', rating: 4.9, status: 'offline' },
-];
+import { DOCTORS, Doctor } from '../../data/doctors';
 
 export default function DoctorSelectScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -35,7 +28,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
   };
 
   const sortedDoctors = [...DOCTORS].sort((a, b) => {
-    const order: Record<string, number> = { online: 0, busy: 1, offline: 2 };
+    const order: Record<string, number> = { online: 0, consulting: 1, examining: 2, offline: 3 };
     return order[a.status] - order[b.status];
   });
 
@@ -47,10 +40,10 @@ export default function DoctorSelectScreen({ navigation }: any) {
     const pet = pets.find(p => p.id === selectedPetId);
     const petName = pet?.name || 'Thú cưng';
 
-    if (doctor.status === 'busy') {
+    if (doctor.status === 'consulting' || doctor.status === 'examining') {
       Alert.alert(
         'Bác sĩ đang bận',
-        `${doctor.name} hiện đang khám bệnh. Bác sĩ có thể reply trễ. Bạn có chấp nhận chờ?`,
+        `${doctor.name} hiện đang ${doctor.status === 'examining' ? 'khám bệnh' : 'tư vấn'}. Bác sĩ có thể reply trễ. Bạn có chấp nhận chờ?`,
         [
           { text: 'Không, chọn bác sĩ khác', style: 'cancel' },
           {
@@ -59,6 +52,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
               doctorId: doctor.id,
               doctorName: doctor.name,
               petName: petName,
+              petId: pet?.id,
             }),
           },
         ]
@@ -68,6 +62,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
         doctorId: doctor.id,
         doctorName: doctor.name,
         petName: petName,
+        petId: pet?.id,
       });
     }
   };
@@ -75,7 +70,8 @@ export default function DoctorSelectScreen({ navigation }: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online': return theme.colors.success;
-      case 'busy': return theme.colors.warning;
+      case 'consulting': return theme.colors.info;
+      case 'examining': return theme.colors.warning;
       case 'offline': return theme.colors.textTertiary;
       default: return theme.colors.textTertiary;
     }
@@ -84,7 +80,8 @@ export default function DoctorSelectScreen({ navigation }: any) {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'online': return 'Online';
-      case 'busy': return 'Đang khám';
+      case 'consulting': return 'Đang tư vấn';
+      case 'examining': return 'Đang khám bệnh';
       case 'offline': return 'Offline';
       default: return status;
     }
@@ -150,7 +147,7 @@ export default function DoctorSelectScreen({ navigation }: any) {
               styles.doctorAvatar,
               { borderColor: getStatusColor(item.status) },
             ]}>
-              <Icon name="medical" size={28} color={theme.colors.primary} />
+              <Image source={{ uri: item.imageUrl }} style={styles.doctorImage} />
               <View style={[styles.onlineDot, { backgroundColor: getStatusColor(item.status) }]} />
             </View>
             <View style={styles.doctorInfo}>
@@ -260,6 +257,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  doctorImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   onlineDot: {
     position: 'absolute',

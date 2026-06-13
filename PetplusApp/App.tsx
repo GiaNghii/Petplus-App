@@ -1,3 +1,4 @@
+import './src/utils/eventPolyfill';
 import React from 'react';
 import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';

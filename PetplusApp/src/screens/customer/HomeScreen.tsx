@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Animated } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { petService } from '../../services/firestoreService';
+import { petService, orderService, appointmentService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
-import { Pet } from '../../types';
+import { Pet, Appointment } from '../../types';
 import Icon from '../../components/Icon';
 import ModernCard from '../../components/ModernCard';
 import Button from '../../components/Button';
-
-const DOCTORS = [
-  { id: 'dr-a', name: 'BS. Nguyễn Văn A', specialty: 'Nội khoa', status: 'available' },
-  { id: 'dr-b', name: 'BS. Trần Thị B', specialty: 'Ngoại khoa', status: 'available' },
-  { id: 'dr-c', name: 'BS. Lê Văn C', specialty: 'Da liễu', status: 'busy' },
-];
+import { DOCTORS, DOCTOR_NAMES } from '../../data/doctors';
+import { PRODUCTS, Product } from '../../data/products';
 
 export default function HomeScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -22,10 +19,20 @@ export default function HomeScreen({ navigation }: any) {
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPetIndex, setSelectedPetIndex] = useState(0);
   const [showPetDropdown, setShowPetDropdown] = useState(false);
+  const [purchasedProducts, setPurchasedProducts] = useState<Product[]>([]);
+  const [upcomingAppointment, setUpcomingAppointment] = useState<Appointment | null>(null);
 
-  useEffect(() => {
+  const loadAll = useCallback(async () => {
     loadPets();
-  }, []);
+    loadPurchasedProducts();
+    loadUpcomingAppointment();
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAll();
+    }, [loadAll])
+  );
 
   const loadPets = async () => {
     if (user?.id) {
@@ -36,8 +43,47 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
+  const loadPurchasedProducts = async () => {
+    if (user?.id) {
+      const result = await orderService.getOrdersByCustomer(user.id);
+      if (result.success && result.orders) {
+        const purchasedIds = [...new Set(
+          result.orders.flatMap(order => order.items.map(item => item.productId))
+        )];
+        const products = purchasedIds
+          .map(id => PRODUCTS.find(p => p.id === id))
+          .filter(Boolean) as Product[];
+        setPurchasedProducts(products);
+      }
+    }
+  };
+
+  const loadUpcomingAppointment = async () => {
+    if (user?.id) {
+      const result = await appointmentService.getAppointmentsByCustomer(user.id);
+      if (result.success && result.appointments) {
+        const now = new Date();
+        const upcoming = result.appointments
+          .filter(apt => (apt.status === 'pending' || apt.status === 'confirmed') && new Date(apt.dateTime) >= now)
+          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+        if (upcoming.length > 0) {
+          setUpcomingAppointment(upcoming[0]);
+        } else {
+          setUpcomingAppointment(null);
+        }
+      }
+    }
+  };
+
   const selectedPet = pets[selectedPetIndex];
   const petName = selectedPet?.name || 'Chưa có pet';
+  const onlineDoctor = DOCTORS.find(d => d.status === 'online');
+  const displayDoctor = onlineDoctor || DOCTORS[0];
+
+  const flashProducts = useMemo(
+    () => PRODUCTS.filter(p => p.isHot || p.isNew).slice(0, 6),
+    []
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -49,7 +95,11 @@ export default function HomeScreen({ navigation }: any) {
               style={styles.petSelector}
               onPress={() => setShowPetDropdown(true)}
             >
-              <Icon name="paw" size={16} color={theme.colors.primary} />
+              {selectedPet?.avatarUrl ? (
+                <Image source={{ uri: selectedPet.avatarUrl }} style={styles.petSelectorAvatar} />
+              ) : (
+                <Icon name="paw" size={16} color={theme.colors.primary} />
+              )}
               <Text style={styles.petName}>{petName}</Text>
               <Icon name="arrow-down" size={12} color={theme.colors.textSecondary} />
             </TouchableOpacity>
@@ -94,7 +144,11 @@ export default function HomeScreen({ navigation }: any) {
                     setShowPetDropdown(false);
                   }}
                 >
-                  <Icon name="paw" size={20} color={theme.colors.primary} />
+                  {pet.avatarUrl ? (
+                    <Image source={{ uri: pet.avatarUrl }} style={styles.dropdownAvatar} />
+                  ) : (
+                    <Icon name="paw" size={20} color={theme.colors.primary} />
+                  )}
                   <Text style={[
                     styles.dropdownText,
                     index === selectedPetIndex && styles.dropdownTextSelected
@@ -121,7 +175,7 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.quickActionCard, { backgroundColor: theme.colors.primaryBg }]}
-            onPress={() => navigation.navigate('Chat', { doctorId: 'dr-a', doctorName: 'Nguyễn Văn A', petName: petName })}
+            onPress={() => navigation.navigate('Chat', { doctorId: DOCTORS[0].id, doctorName: DOCTORS[0].name, petName: petName, petId: selectedPet?.id })}
           >
             <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.primary }]}>
               <Icon name="chat" size={22} color={theme.colors.textOnPrimary} />
@@ -130,7 +184,11 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickActionCard, { backgroundColor: theme.colors.secondaryBg }]}
-            onPress={() => navigation.navigate('ScheduleTab')}
+            onPress={() => {
+              if (selectedPet) {
+                navigation.navigate('SelectBranch', { petId: selectedPet.id, petName: selectedPet.name });
+              }
+            }}
           >
             <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.secondary }]}>
               <Icon name="calendar" size={22} color={theme.colors.textOnPrimary} />
@@ -152,57 +210,84 @@ export default function HomeScreen({ navigation }: any) {
         <ModernCard style={styles.appointmentCard} header={
           <View style={styles.appointmentHeader}>
             <Text style={styles.appointmentTitle}>Lịch khám sắp tới</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('ScheduleTab')}>
               <Text style={styles.viewDetail}>Xem chi tiết →</Text>
             </TouchableOpacity>
           </View>
         }>
-          <View style={styles.appointmentContent}>
-            <View style={styles.appointmentImage}>
-              <Icon name="paw" size={32} color={theme.colors.primary} />
+          {upcomingAppointment ? (
+            <View style={styles.appointmentContent}>
+              <View style={styles.appointmentImage}>
+                {(pets.find(p => p.id === upcomingAppointment.petId))?.avatarUrl ? (
+                  <Image source={{ uri: (pets.find(p => p.id === upcomingAppointment.petId))!.avatarUrl! }} style={styles.appointmentPetImage} />
+                ) : (
+                  <Icon name="paw" size={32} color={theme.colors.primary} />
+                )}
+              </View>
+              <View style={styles.appointmentInfo}>
+                <View style={styles.appointmentRow}>
+                  <Text style={styles.appointmentLabel}>Ngày khám</Text>
+                  <Text style={styles.appointmentValue}>
+                    {new Date(upcomingAppointment.dateTime).toLocaleDateString('vi-VN')}
+                  </Text>
+                </View>
+                <View style={styles.appointmentRow}>
+                  <Text style={styles.appointmentLabel}>Khung giờ</Text>
+                  <Text style={styles.appointmentValue}>{upcomingAppointment.slot}</Text>
+                </View>
+                <View style={styles.appointmentRow}>
+                  <Text style={styles.appointmentLabel}>Pet</Text>
+                  <Text style={styles.appointmentValue}>
+                    {pets.find(p => p.id === upcomingAppointment.petId)?.name || petName}
+                  </Text>
+                </View>
+                <View style={styles.appointmentRow}>
+                  <Text style={styles.appointmentLabel}>Bác sĩ</Text>
+                  <Text style={styles.appointmentValue}>
+                    {DOCTOR_NAMES[upcomingAppointment.doctorId] || 'Đang cập nhật'}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.appointmentInfo}>
-              <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Ngày khám</Text>
-                <Text style={styles.appointmentValue}>dd/mm/yyyy</Text>
-              </View>
-              <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Khung giờ</Text>
-                <Text style={styles.appointmentValue}>10:00 - 12:00</Text>
-              </View>
-              <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Pet</Text>
-                <Text style={styles.appointmentValue}>{petName}</Text>
-              </View>
-              <View style={styles.appointmentRow}>
-                <Text style={styles.appointmentLabel}>Bác sĩ</Text>
-                <Text style={styles.appointmentValue}>BS. Nguyễn B</Text>
-              </View>
+          ) : (
+            <View style={styles.appointmentEmpty}>
+              <Icon name="calendar-outline" size={48} color={theme.colors.border} style={{ marginBottom: theme.spacing.sm }} />
+              <Text style={styles.appointmentEmptyText}>Chưa có lịch khám nào</Text>
+              <Button
+                title="Đặt lịch ngay"
+                size="sm"
+                onPress={() => navigation.navigate('SelectBranch', {
+                  petId: selectedPet?.id,
+                  petName: selectedPet?.name,
+                })}
+                icon="add"
+                style={{ marginTop: theme.spacing.md }}
+              />
             </View>
-          </View>
+          )}
         </ModernCard>
 
         {/* Doctors Online */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Bác sĩ đang online</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('AllDoctors')}>
               <Text style={styles.viewAll}>Xem tất cả →</Text>
             </TouchableOpacity>
           </View>
           <ModernCard>
             <View style={styles.doctorCard}>
               <View style={styles.doctorAvatar}>
-                <Icon name="medical" size={28} color={theme.colors.primary} />
+                <Image source={{ uri: displayDoctor.imageUrl }} style={styles.doctorImage} />
               </View>
               <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>Bác sĩ C</Text>
-                <Text style={styles.doctorSpecialty}>Chuyên gia nội khoa</Text>
+                <Text style={styles.doctorName}>{displayDoctor.name}</Text>
+                <Text style={styles.doctorSpecialty}>{displayDoctor.specialty}</Text>
               </View>
               <Button
                 title="Chat ngay"
                 size="sm"
-                onPress={() => navigation.navigate('Chat', { doctorId: 'dr-c', doctorName: 'Bác sĩ C', petName: petName })}
+                onPress={() => navigation.navigate('Chat', { doctorId: displayDoctor.id, doctorName: displayDoctor.name, petName: petName, petId: selectedPet?.id })}
               />
             </View>
           </ModernCard>
@@ -217,21 +302,29 @@ export default function HomeScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.medicineScroll}>
-            {[
-              { name: 'Breeders Chow', price: '320.000 đ', rating: '4.8', icon: 'medkit-outline', color: theme.colors.infoBg },
-              { name: 'Medicated Special', price: '280.000 đ', rating: '4.7', icon: 'medkit-outline', color: theme.colors.secondaryBg },
-              { name: 'NutriPro 300', price: '150.000 đ', rating: '4.6', icon: 'medkit-outline', color: theme.colors.successBg },
-            ].map((item, index) => (
-              <ModernCard key={index} style={styles.medicineCard} padding="md">
-                <View style={[styles.medicineImage, { backgroundColor: item.color }]}>
-                  <Icon name="medkit" size={32} color={theme.colors.primary} />
+            {purchasedProducts.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+              >
+              <ModernCard style={styles.flashCard} padding="md">
+                <View style={styles.flashImageContainer}>
+                  <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
+                    ) : item.imageLocal ? (
+                      <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
+                    ) : (
+                      <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                    )}
+                  </View>
                 </View>
-                <Text style={styles.medicineName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.medicinePrice}>{item.price}</Text>
-                <View style={styles.medicineRating}>
-                  <Icon name="star" size={12} color={theme.colors.accent} />
-                  <Text style={styles.medicineRatingText}> {item.rating}</Text>
-                </View>
+                <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
+                <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                {item.originalPrice && (
+                  <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
+                )}
                 <Button
                   title="Mua lại"
                   size="sm"
@@ -239,6 +332,7 @@ export default function HomeScreen({ navigation }: any) {
                   onPress={() => navigation.navigate('Shop')}
                 />
               </ModernCard>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -253,23 +347,34 @@ export default function HomeScreen({ navigation }: any) {
             <Text style={styles.flashTimer}>Kết thúc sau: 02:15:30</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.flashScroll}>
-            {[
-              { name: 'Pedigree cho chó trưởng thành', price: '199.000 đ', oldPrice: '250.000 đ', discount: '-20%', icon: 'medkit-outline', color: theme.colors.secondaryBg },
-              { name: 'Sữa dinh dưỡng cho cún', price: '125.000 đ', oldPrice: '180.000 đ', discount: '-30%', icon: 'medkit-outline', color: theme.colors.infoBg },
-              { name: 'Pate dinh dưỡng cho mèo', price: '89.000 đ', oldPrice: '120.000 đ', discount: '-25%', icon: 'medkit-outline', color: theme.colors.accentBg },
-            ].map((item, index) => (
-              <ModernCard key={index} style={styles.flashCard} padding="md">
+            {flashProducts.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+              >
+              <ModernCard style={styles.flashCard} padding="md">
                 <View style={styles.flashImageContainer}>
-                  <View style={[styles.flashImage, { backgroundColor: item.color }]}>
-                    <Icon name="medkit" size={32} color={theme.colors.primary} />
+                  <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
+                    ) : item.imageLocal ? (
+                      <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
+                    ) : (
+                      <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                    )}
                   </View>
-                  <View style={styles.discountBadge}>
-                    <Text style={styles.discountText}>{item.discount}</Text>
-                  </View>
+                  {(item.isHot || item.isNew) && (
+                    <View style={styles.discountBadge}>
+                      <Text style={styles.discountText}>{item.isHot ? 'HOT' : 'MỚI'}</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.flashPrice}>{item.price}</Text>
-                <Text style={styles.flashOldPrice}>{item.oldPrice}</Text>
+                <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                {item.originalPrice && (
+                  <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
+                )}
                 <Button
                   title="Mua ngay"
                   size="sm"
@@ -277,6 +382,7 @@ export default function HomeScreen({ navigation }: any) {
                   onPress={() => navigation.navigate('Shop')}
                 />
               </ModernCard>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -314,6 +420,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: theme.radius.pill,
     gap: 6,
+  },
+  petSelectorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   petName: {
     fontSize: 13,
@@ -382,6 +493,11 @@ const styles = StyleSheet.create({
   },
   dropdownItemSelected: {
     backgroundColor: theme.colors.primaryBg,
+  },
+  dropdownAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   dropdownText: {
     flex: 1,
@@ -460,6 +576,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  appointmentPetImage: {
+    width: 80,
+    height: 80,
+    borderRadius: theme.radius.lg,
   },
   appointmentInfo: {
     flex: 1,
@@ -479,6 +601,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textPrimary,
     fontWeight: '600',
+  },
+  appointmentEmpty: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
+  },
+  appointmentEmptyText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
   section: {
     paddingHorizontal: theme.spacing.lg,
@@ -511,6 +642,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryBg,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  doctorImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   doctorInfo: {
     flex: 1,
@@ -535,10 +672,15 @@ const styles = StyleSheet.create({
   medicineImage: {
     width: 70,
     height: 70,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.md,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
+  },
+  medicineImageInner: {
+    width: 62,
+    height: 62,
+    borderRadius: 6,
   },
   medicineName: {
     ...theme.typography.smallBold,
@@ -598,6 +740,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  flashImageInner: {
+    width: 75,
+    height: 75,
+    borderRadius: 8,
   },
   discountBadge: {
     position: 'absolute',

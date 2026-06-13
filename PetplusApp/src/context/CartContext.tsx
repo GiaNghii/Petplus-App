@@ -7,6 +7,7 @@ export interface Product {
   type: 'OTC' | 'prescription';
   category: string;
   description?: string;
+  imageUrl?: string;
   imageLocal?: any;
   stock?: number;
   unit?: string;

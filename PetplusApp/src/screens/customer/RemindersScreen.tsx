@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
@@ -7,6 +7,8 @@ import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
 
 export default function RemindersScreen({ navigation }: any) {
+  const [selectedReminder, setSelectedReminder] = useState<any>(null);
+  const [takenMedicines, setTakenMedicines] = useState<Set<string>>(new Set());
   const reminders = [
     {
       id: '1',
@@ -16,6 +18,7 @@ export default function RemindersScreen({ navigation }: any) {
       time: '14:00 - 16:00',
       branch: 'Petplus Gò Vấp',
       doctor: 'BS. Nguyễn Văn A',
+      note: 'Pet bị chảy nước mắt, khám định kì',
       urgent: true,
     },
     {
@@ -70,7 +73,10 @@ export default function RemindersScreen({ navigation }: any) {
     }
   };
 
-  const renderReminder = (reminder: any) => (
+  const renderReminder = (reminder: any) => {
+    const isTaken = takenMedicines.has(reminder.id);
+
+    return (
     <ModernCard key={reminder.id} style={styles.reminderCard}>
       <View style={styles.reminderHeader}>
         <View style={styles.petNameRow}>
@@ -122,20 +128,38 @@ export default function RemindersScreen({ navigation }: any) {
       </View>
 
       {reminder.type === 'medicine' && (
-        <TouchableOpacity style={styles.actionButton}>
-          <Icon name="checkmark" size={14} color={theme.colors.textOnPrimary} />
-          <Text style={styles.actionButtonText}>Đánh dấu đã uống</Text>
+        <TouchableOpacity
+          style={[styles.actionButton, isTaken && styles.actionButtonTaken]}
+          onPress={() => {
+            setTakenMedicines(prev => {
+              const next = new Set(prev);
+              next.add(reminder.id);
+              return next;
+            });
+          }}
+          disabled={isTaken}
+        >
+          <Icon name="checkmark" size={14} color={isTaken ? theme.colors.textSecondary : theme.colors.textOnPrimary} />
+          <Text style={[styles.actionButtonText, isTaken && styles.actionButtonTextTaken]}>
+            {isTaken ? 'Đã uống' : 'Đánh dấu đã uống'}
+          </Text>
         </TouchableOpacity>
       )}
       {reminder.type === 'vaccination' && (
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('SelectBranch')}
+        >
           <Icon name="calendar" size={14} color={theme.colors.textOnPrimary} />
           <Text style={styles.actionButtonText}>Đặt lịch ngay</Text>
         </TouchableOpacity>
       )}
       {reminder.type === 'checkup' && (
         <View style={styles.actionRow}>
-          <TouchableOpacity style={[styles.actionButton, styles.flex1]}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.flex1]}
+            onPress={() => setSelectedReminder(reminder)}
+          >
             <Text style={styles.actionButtonText}>Xem chi tiết</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.actionButton, styles.cancelButton]}>
@@ -145,6 +169,7 @@ export default function RemindersScreen({ navigation }: any) {
       )}
     </ModernCard>
   );
+};
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -172,6 +197,56 @@ export default function RemindersScreen({ navigation }: any) {
           <Text style={styles.emptyText}>Tất cả nhắc nhở đã được xử lý</Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={selectedReminder !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedReminder(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Chi tiết lịch khám</Text>
+
+            <View style={styles.modalItem}>
+              <Icon name="paw" size={18} color={theme.colors.primary} />
+              <Text style={styles.modalLabel}>Thú cưng:</Text>
+              <Text style={styles.modalValue}>{selectedReminder?.pet}</Text>
+            </View>
+
+            <View style={styles.modalItem}>
+              <Icon name="location" size={18} color={theme.colors.primary} />
+              <Text style={styles.modalLabel}>Địa chỉ:</Text>
+              <Text style={styles.modalValue}>{selectedReminder?.branch}</Text>
+            </View>
+
+            <View style={styles.modalItem}>
+              <Icon name="calendar" size={18} color={theme.colors.primary} />
+              <Text style={styles.modalLabel}>Thời gian:</Text>
+              <Text style={styles.modalValue}>{selectedReminder?.time}</Text>
+            </View>
+
+            <View style={styles.modalItem}>
+              <Icon name="medical" size={18} color={theme.colors.primary} />
+              <Text style={styles.modalLabel}>Bác sĩ:</Text>
+              <Text style={styles.modalValue}>{selectedReminder?.doctor}</Text>
+            </View>
+
+            <View style={styles.modalItem}>
+              <Icon name="create" size={18} color={theme.colors.primary} />
+              <Text style={styles.modalLabel}>Ghi chú:</Text>
+              <Text style={styles.modalValue}>{selectedReminder?.note || 'Khám định kì'}</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCloseBtn}
+              onPress={() => setSelectedReminder(null)}
+            >
+              <Text style={styles.modalCloseText}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -283,5 +358,58 @@ const styles = StyleSheet.create({
   emptyText: {
     ...theme.typography.small,
     color: theme.colors.textSecondary,
+  },
+  actionButtonTaken: {
+    backgroundColor: theme.colors.border,
+  },
+  actionButtonTextTaken: {
+    color: theme.colors.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xxl,
+    width: '100%',
+    maxWidth: 360,
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: theme.spacing.md,
+  },
+  modalLabel: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.textSecondary,
+    minWidth: 80,
+  },
+  modalValue: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  modalCloseBtn: {
+    backgroundColor: theme.colors.primary,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+    alignItems: 'center',
+    marginTop: theme.spacing.lg,
+  },
+  modalCloseText: {
+    color: theme.colors.textOnPrimary,
+    ...theme.typography.smallBold,
   },
 });

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { theme } from '../../utils/theme';
 import Icon, { IconName } from '../../components/Icon';
 import ModernCard from '../../components/ModernCard';
+import { petService } from '../../services/firestoreService';
 
 interface MenuItem {
   id: string;
@@ -17,6 +18,19 @@ interface MenuItem {
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [petCount, setPetCount] = useState(0);
+
+  useEffect(() => {
+    const loadPetCount = async () => {
+      if (user?.id) {
+        const result = await petService.getPetsByOwner(user.id);
+        if (result.success && result.pets) {
+          setPetCount(result.pets.length);
+        }
+      }
+    };
+    loadPetCount();
+  }, [user]);
 
   const handleLogout = async () => {
     await logout();
@@ -86,7 +100,7 @@ export default function ProfileScreen({ navigation }: any) {
       <ModernCard style={styles.statsCard} padding="lg">
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>3</Text>
+            <Text style={styles.statNumber}>{petCount}</Text>
             <Text style={styles.statLabel}>Thú cưng</Text>
           </View>
           <View style={styles.statDivider} />

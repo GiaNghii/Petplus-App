@@ -1,47 +1,148 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Icon from '../../components/Icon';
-import { useCart } from '../../context/CartContext';
+import QuickChatPanel from '../../components/QuickChatPanel';
+import { petService, orderService, productService } from '../../services/firestoreService';
+import { useAuth } from '../../context/AuthContext';
+import { Pet, Order } from '../../types';
+import { QuickTreatment, TREATMENTS, buildQuickChatMessage, checkTreatmentPrescribed, CONDITIONS } from '../../data/quickChatData';
 
 interface Message {
   id: string;
   text: string;
   sender: 'customer' | 'doctor';
   timestamp: Date;
-  productLink?: { name: string; price: number };
+  productLink?: { id: string; name: string; price: number; description: string; conditionId: string };
 }
 
 const AUTO_REPLIES = [
-  'Dạ em hiểu rồi ạ. Chị có thể mô tả thêm triệu chứng không?',
-  'Em sẽ kiểm tra lại hồ sơ của pet. Chị vui lòng chờ nhé.',
+  'Dạ em hiểu rồi ạ. Anh/chị có thể mô tả thêm triệu chứng không?',
+  'Em sẽ kiểm tra lại hồ sơ của pet. Anh/chị vui lòng chờ nhé.',
   'Theo em thấy thì tình trạng này khá phổ biến. Em sẽ kê đơn thuốc phù hợp.',
-  'Chị nhớ cho pet uống thuốc đúng giờ nhé. Nếu có gì bất thường thì nhắn em ngay.',
-  'Em đã ghi nhận thông tin. Chị yên tâm, tình trạng này sẽ cải thiện sau vài ngày.',
-  'Chị có thể gửi thêm hình ảnh vùng bị ảnh hưởng để em chẩn đoán chính xác hơn không?',
-  'Dạ vâng, em hiểu. Em sẽ tư vấn chị phương án điều trị tốt nhất.',
-  'Chị nhớ theo dõi tình trạng của pet trong 2-3 ngày tới nhé.',
-  'Em đã gửi đơn thuốc. Chị có thể mua trực tiếp trên app ạ.',
-  'Nếu pet có biểu hiện bất thường, chị đưa đến phòng khám ngay nhé.',
+  'Anh/chị nhớ cho pet uống thuốc đúng giờ nhé. Nếu có gì bất thường thì nhắn em ngay.',
+  'Em đã ghi nhận thông tin. Anh/chị yên tâm, tình trạng này sẽ cải thiện sau vài ngày.',
+  'Anh/chị có thể gửi thêm hình ảnh vùng bị ảnh hưởng để em chẩn đoán chính xác hơn không?',
+  'Dạ vâng, em hiểu. Em sẽ tư vấn anh/chị phương án điều trị tốt nhất.',
+  'Anh/chị nhớ theo dõi tình trạng của pet trong 2-3 ngày tới nhé.',
+  'Nếu pet có biểu hiện bất thường, anh/chị đưa đến phòng khám ngay nhé.',
 ];
+
+const CONDITION_INTROS: Record<string, string> = {
+  condition_ear_mites: 'Dạ anh/chị, với tình trạng rận tai bên em có các sản phẩm sau. Anh/chị xem và chọn sản phẩm phù hợp nhé:',
+  condition_watery_eyes: 'Dạ anh/chị, với tình trạng chảy nước mắt bên em có các sản phẩm sau. Anh/chị tham khảo nhé:',
+  condition_hair_loss: 'Dạ anh/chị, với tình trạng rụng lông bên em đề xuất các sản phẩm hỗ trợ sau. Anh/chị xem qua nhé:',
+  condition_matted_fur: 'Dạ anh/chị, với tình trạng bết lông bên em có các sản phẩm chăm sóc sau. Anh/chị tham khảo nhé:',
+};
 
 let replyIndex = 0;
 
 export default function ChatScreen({ route, navigation }: any) {
-  const { doctorId, doctorName, petName } = route.params;
-  const { addItem } = useCart();
+  const { doctorId, doctorName, petName, petId } = route.params;
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: `Dạ chào chị, em là bác sĩ ${doctorName}. Chị cần tư vấn về ${petName} ạ?`,
+      text: `Dạ chào anh/chị, em là bác sĩ ${doctorName}. Anh/chị cần tư vấn về ${petName} ạ?`,
       sender: 'doctor',
       timestamp: new Date(),
     },
   ]);
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
+
+  const [pet, setPet] = useState<Pet | null>(null);
+  const [prescribedMedNames, setPrescribedMedNames] = useState<string[]>([]);
+  const [showQuickChat, setShowQuickChat] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+
+  useEffect(() => {
+    loadPetAndPrescriptions();
+  }, []);
+
+  const loadPetAndPrescriptions = async () => {
+    if (petId && user?.id) {
+      const petResult = await petService.getPet(petId);
+      if (petResult.success && petResult.pet) {
+        setPet(petResult.pet);
+      }
+
+      const orderResult = await orderService.getOrdersByCustomer(user.id);
+      if (orderResult.success && orderResult.orders) {
+        const productResult = await productService.getProducts();
+        const productMap = new Map<string, string>();
+        if (productResult.success && productResult.products) {
+          productResult.products.forEach((p: { id: string; name: string }) => {
+            productMap.set(p.id, p.name);
+          });
+        }
+
+        const medNames: string[] = [];
+        orderResult.orders.forEach((order: Order) => {
+          order.items.forEach((item) => {
+            if (item.type === 'prescription' && item.petId === petId) {
+              const productName = productMap.get(item.productId);
+              if (productName) {
+                medNames.push(productName);
+              }
+            }
+          });
+        });
+        setPrescribedMedNames(medNames);
+      }
+    }
+  };
+
+  const handleSelectCondition = (conditionId: string) => {
+    const condition = CONDITIONS.find(c => c.id === conditionId);
+    if (!condition) return;
+
+    const customerMsg: Message = {
+      id: Date.now().toString(),
+      text: buildQuickChatMessage(petName, condition.name),
+      sender: 'customer',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, customerMsg]);
+    setShowQuickChat(false);
+
+    const treatments = TREATMENTS[conditionId] || [];
+    const introText = CONDITION_INTROS[conditionId] || 'Dạ anh/chị, bên em có các sản phẩm sau phù hợp với tình trạng này:';
+
+    setTimeout(() => {
+      const introMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        text: introText,
+        sender: 'doctor',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, introMsg]);
+    }, 1500);
+
+    treatments.forEach((treatment, index) => {
+      setTimeout(() => {
+        const prefix = checkTreatmentPrescribed(treatment, prescribedMedNames)
+          ? ' (Đã từng kê đơn)'
+          : '';
+        const productMsg: Message = {
+          id: `prod_${Date.now()}_${index}`,
+          text: `${treatment.description}`,
+          sender: 'doctor',
+          timestamp: new Date(),
+          productLink: {
+            id: treatment.id,
+            name: `${treatment.name}${prefix}`,
+            price: treatment.price,
+            description: treatment.description,
+            conditionId,
+          },
+        };
+        setMessages(prev => [...prev, productMsg]);
+      }, 3000 + index * 1200);
+    });
+  };
 
   const sendMessage = () => {
     if (!inputText.trim()) return;
@@ -55,45 +156,23 @@ export default function ChatScreen({ route, navigation }: any) {
 
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
 
-    // Auto reply with varied messages
-    setTimeout(() => {
-      const reply = AUTO_REPLIES[replyIndex % AUTO_REPLIES.length];
-      replyIndex++;
-      
-      const doctorReply: Message = {
-        id: (Date.now() + 1).toString(),
-        text: reply,
-        sender: 'doctor',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, doctorReply]);
-    }, 1500);
+    if (showQuickChat) {
+      setShowQuickChat(false);
+    }
   };
 
-  const handleBuyProduct = (product: { name: string; price: number }) => {
-    Alert.alert(
-      'Thuốc kê đơn',
-      'Đảm bảo thuốc này được sử dụng cho đúng thú cưng được kê đơn, không sử dụng cho các thú cưng khác để tránh các trường hợp xấu có thể xảy ra.',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xác nhận',
-          onPress: () => {
-            addItem({
-              id: `prescription_${Date.now()}`,
-              name: product.name,
-              price: product.price,
-              type: 'prescription',
-              category: 'thuoc',
-              description: '',
-              stock: 10,
-            });
-            Alert.alert('Đã thêm vào giỏ', `${product.name} đã được thêm vào giỏ hàng`);
-          },
-        },
-      ]
-    );
+const handleProductTap = (productLink: Message['productLink']) => {
+    if (!productLink) return;
+    navigation.navigate('ProductDetail', {
+      productId: productLink.id,
+      productName: productLink.name,
+      productPrice: productLink.price,
+      productDescription: productLink.description,
+      conditionId: productLink.conditionId,
+    });
   };
 
   const renderMessage = ({ item }: { item: Message }) => (
@@ -112,21 +191,29 @@ export default function ChatScreen({ route, navigation }: any) {
           {item.text}
         </Text>
         {item.productLink && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.productCard}
-            onPress={() => handleBuyProduct(item.productLink!)}
+            onPress={() => handleProductTap(item.productLink)}
+            activeOpacity={0.7}
           >
-            <Icon name="medkit" size={32} color={theme.colors.primary} />
+            <View style={styles.productIconWrap}>
+              <Icon name="medkit" size={22} color={theme.colors.primary} />
+            </View>
             <View style={styles.productInfo}>
               <Text style={styles.productName}>{item.productLink.name}</Text>
               <Text style={styles.productPrice}>
                 {item.productLink.price.toLocaleString('vi-VN')}đ
               </Text>
-              <Text style={styles.buyText}>Nhấn để mua</Text>
+            </View>
+            <View style={styles.buyChip}>
+              <Text style={styles.buyChipText}>Mua</Text>
             </View>
           </TouchableOpacity>
         )}
-        <Text style={styles.timestamp}>
+        <Text style={[
+          styles.timestamp,
+          item.sender === 'customer' ? styles.customerTimestamp : styles.doctorTimestamp
+        ]}>
           {item.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
@@ -135,6 +222,13 @@ export default function ChatScreen({ route, navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <Modal visible={showToast} transparent animationType="fade">
+        <View style={styles.toastOverlay}>
+          <View style={styles.toastCard}>
+            <Text style={styles.toastText}>Vui lòng chờ bác sĩ phản hồi</Text>
+          </View>
+        </View>
+      </Modal>
       <Header
         title={doctorName}
         subtitle={petName}
@@ -156,6 +250,13 @@ export default function ChatScreen({ route, navigation }: any) {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
+        <QuickChatPanel
+          visible={showQuickChat}
+          pet={pet}
+          onSelectCondition={handleSelectCondition}
+          onDismiss={() => setShowQuickChat(false)}
+        />
+
         <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.attachButton}>
             <Icon name="attach" size={24} color={theme.colors.textSecondary} />
@@ -167,7 +268,7 @@ export default function ChatScreen({ route, navigation }: any) {
             onChangeText={setInputText}
             multiline
           />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
             onPress={sendMessage}
             disabled={!inputText.trim()}
@@ -227,7 +328,12 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     marginTop: 4,
-    opacity: 0.7,
+  },
+  customerTimestamp: {
+    color: '#FFFFFF',
+  },
+  doctorTimestamp: {
+    color: theme.colors.textSecondary,
   },
   productCard: {
     backgroundColor: theme.colors.warningBg,
@@ -237,6 +343,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
+  },
+  productIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.primaryBg,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productInfo: {
     flex: 1,
@@ -252,11 +366,16 @@ const styles = StyleSheet.create({
     color: theme.colors.primaryDarker,
     marginTop: 4,
   },
-  buyText: {
-    fontSize: 12,
-    color: theme.colors.primary,
-    marginTop: 4,
+  buyChip: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.pill,
+  },
+  buyChipText: {
+    fontSize: 13,
     fontWeight: '600',
+    color: theme.colors.textOnPrimary,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -289,5 +408,23 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: theme.colors.border,
+  },
+  toastOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  toastCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.xxl,
+    paddingVertical: theme.spacing.lg,
+    ...theme.shadow.lg,
+  },
+  toastText: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
   },
 });

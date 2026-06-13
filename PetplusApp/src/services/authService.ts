@@ -18,7 +18,7 @@ const SEED_USERS: (User & { password: string })[] = [
   },
   {
     id: 'doctor_user',
-    name: 'BS. Nguyễn Văn A',
+    name: 'Bác sĩ tiếp nhận nội khoa',
     email: 'doctor@petplus.vn',
     phone: '0909876543',
     role: 'doctor',

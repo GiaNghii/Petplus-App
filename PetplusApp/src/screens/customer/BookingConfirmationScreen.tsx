@@ -9,6 +9,7 @@ import Header from '../../components/Header';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
+import { DOCTOR_NAMES } from '../../data/doctors';
 
 const BRANCHES: Record<string, string> = {
   'go-vap': 'Petplus Gò Vấp',
@@ -16,24 +17,25 @@ const BRANCHES: Record<string, string> = {
   'quan-12': 'Petplus Quận 12',
 };
 
-const DOCTORS: Record<string, string> = {
-  'dr-a': 'BS. Nguyễn Văn A',
-  'dr-b': 'BS. Trần Thị B',
-  'dr-c': 'BS. Lê Văn C',
-  'auto': 'Hệ thống tự lựa chọn',
-};
-
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { user } = useAuth();
-  const { branchId, doctorId, date, slot } = route.params;
+  const { branchId, doctorId, date, dateDisplay, slot, petId, petName: petDisplayName } = route.params;
   const [loading, setLoading] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const doctorName = DOCTORS[doctorId] || 'Bác sĩ';
+  const doctorName = DOCTOR_NAMES[doctorId] || 'Bác sĩ';
   const branchName = BRANCHES[branchId] || 'Petplus';
-  const petName = 'Buddy';
+  const petName = petDisplayName || 'Chưa có pet';
+
+  const buildDateTime = () => {
+    const dateObj = new Date(date);
+    const [startTime] = slot.split(' - ');
+    const [hours, minutes] = startTime.split(':').map(Number);
+    dateObj.setHours(hours, minutes, 0, 0);
+    return dateObj;
+  };
 
   const handleConfirm = async () => {
     if (!user?.id) {
@@ -48,9 +50,9 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
     const result = await appointmentService.createAppointment({
       branchId,
       doctorId: doctorId === 'auto' ? 'dr-a' : doctorId,
-      petId: 'pet_1',
+      petId: petId || 'unknown',
       customerId: user.id,
-      dateTime: new Date(),
+      dateTime: buildDateTime(),
       slot,
       status: 'pending',
     });
@@ -64,7 +66,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       setShowNotification(true);
       setTimeout(() => {
         setShowNotification(false);
-        navigation.navigate('ScheduleTab');
+        navigation.navigate('MainTabs', { screen: 'ScheduleTab' });
       }, 2000);
     } else {
       setNotificationMessage('Không thể đặt lịch. Vui lòng thử lại.');
@@ -128,7 +130,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
             </View>
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Ngày khám</Text>
-              <Text style={styles.infoValue}>{date || 'Chưa chọn'}, Tháng 6, 2026</Text>
+              <Text style={styles.infoValue}>{dateDisplay || new Date(date).toLocaleDateString('vi-VN')}</Text>
             </View>
           </View>
 

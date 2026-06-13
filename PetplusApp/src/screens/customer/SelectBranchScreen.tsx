@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
+import { petService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
@@ -36,8 +39,36 @@ const BRANCHES = [
   },
 ];
 
-export default function SelectBranchScreen({ navigation }: any) {
+export default function SelectBranchScreen({ route, navigation }: any) {
+  const { user } = useAuth();
+  const { petId, petName } = route.params || {};
+  const [resolvedPetId, setResolvedPetId] = useState<string | undefined>(petId);
+  const [resolvedPetName, setResolvedPetName] = useState<string | undefined>(petName);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+
+  const resolvePetInfo = useCallback(async () => {
+    if (petId && petName) {
+      setResolvedPetId(petId);
+      setResolvedPetName(petName);
+      return;
+    }
+    if (!user?.id) return;
+    const result = await petService.getPetsByOwner(user.id);
+    if (result.success && result.pets && result.pets.length > 0) {
+      setResolvedPetId(result.pets[0].id);
+      setResolvedPetName(result.pets[0].name);
+    } else {
+      Alert.alert('Chưa có thú cưng', 'Vui lòng thêm thú cưng trước khi đặt lịch.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    }
+  }, [petId, petName, user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      resolvePetInfo();
+    }, [resolvePetInfo])
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -113,7 +144,7 @@ export default function SelectBranchScreen({ navigation }: any) {
             title="Tiếp tục"
             onPress={() => {
               if (selectedBranch) {
-                navigation.navigate('SelectDoctor', { branchId: selectedBranch });
+                navigation.navigate('SelectDoctor', { branchId: selectedBranch, petId: resolvedPetId, petName: resolvedPetName });
               }
             }}
             disabled={!selectedBranch}

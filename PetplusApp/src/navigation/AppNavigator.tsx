@@ -26,6 +26,9 @@ import RemindersScreen from '../screens/customer/RemindersScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 import ScheduleScreen from '../screens/customer/ScheduleScreen';
 import DoctorSelectScreen from '../screens/customer/DoctorSelectScreen';
+import ProductDetailScreen from '../screens/customer/ProductDetailScreen';
+import OrderConfirmationScreen from '../screens/customer/OrderConfirmationScreen';
+import AllDoctorsScreen from '../screens/customer/AllDoctorsScreen';
 import TestConnectionScreen from '../screens/TestConnectionScreen';
 
 // Doctor screens
@@ -137,6 +140,9 @@ function CustomerStackNavigator() {
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Orders" component={OrderHistoryScreen} />
       <Stack.Screen name="Reminders" component={RemindersScreen} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
+      <Stack.Screen name="AllDoctors" component={AllDoctorsScreen} />
     </Stack.Navigator>
   );
 }

@@ -9,6 +9,23 @@ export interface User {
   createdAt: Date;
 }
 
+export interface WeightRecord {
+  date: Date;
+  weight: number;
+}
+
+export interface MedicalRecord {
+  date: Date;
+  medication: string;
+  notes: string;
+}
+
+export interface VaccinationRecord {
+  date: Date;
+  vaccine: string;
+  status: 'completed' | 'upcoming' | 'overdue';
+}
+
 export interface Pet {
   id: string;
   ownerId: string;
@@ -22,6 +39,9 @@ export interface Pet {
   vaccinationHistory: { name: string; date: Date }[];
   avatarUrl?: string;
   createdAt: Date;
+  weightHistory?: WeightRecord[];
+  medicalRecords?: MedicalRecord[];
+  vaccinationSchedule?: VaccinationRecord[];
 }
 
 export interface Branch {
@@ -77,6 +97,15 @@ export interface Product {
   type: 'OTC' | 'prescription';
   category: string;
   stock: Record<string, number>; // branchId -> quantity
+  imageLocal?: any;
+  bgColor?: string;
+  rating?: number;
+  reviews?: number;
+  sold?: number;
+  unit?: string;
+  isNew?: boolean;
+  isHot?: boolean;
+  discount?: number;
   createdAt: Date;
 }
 

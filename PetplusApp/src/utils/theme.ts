@@ -31,7 +31,7 @@ export const theme = {
     infoBg: '#EAF2F7',
 
     // Neutrals — Cool gray family for modern feel
-    background: '#FAFBF9',
+    background: '#FFFFFF',
     surface: '#FFFFFF',
     surfaceAlt: '#F5F7F5',
     border: '#E5E9E7',

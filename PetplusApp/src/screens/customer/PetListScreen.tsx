@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { petService } from '../../services/firestoreService';
@@ -96,9 +96,13 @@ export default function PetListScreen({ navigation }: any) {
           <View style={styles.petHeader}>
             <View style={[
               styles.petAvatar, 
-              { backgroundColor: getPetColor(item.species) + '20' }
+              { backgroundColor: item.avatarUrl ? 'transparent' : getPetColor(item.species) + '20' }
             ]}>
-              <Icon name={getPetIconName(item.species)} size={28} color={getPetColor(item.species)} />
+              {item.avatarUrl ? (
+                <Image source={{ uri: item.avatarUrl }} style={styles.petAvatarImage} />
+              ) : (
+                <Icon name={getPetIconName(item.species)} size={28} color={getPetColor(item.species)} />
+              )}
             </View>
             <View style={styles.petInfo}>
               <Text style={styles.petName}>{item.name}</Text>
@@ -251,6 +255,12 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  petAvatarImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
   },
   petInfo: {
     flex: 1,

@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Alert, TextInput, Image } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Alert, TextInput, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { petService } from '../../services/firestoreService';
+import { petService, productService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
-import { PRODUCTS, CATEGORIES } from '../../data/products';
+import { PRODUCTS, CATEGORIES, Product } from '../../data/products';
 import Icon from '../../components/Icon';
 
 export default function ShopScreen({ navigation }: any) {
@@ -13,23 +13,34 @@ export default function ShopScreen({ navigation }: any) {
   const { addItem, updateQuantity, items, totalItems, totalAmount } = useCart();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchText, setSearchText] = useState('');
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    productService.getProducts().then(result => {
+      if (result.success) {
+        setProducts(result.products);
+      }
+      setLoading(false);
+    });
+  }, []);
 
   const filteredProducts = useMemo(() => {
-    let products = PRODUCTS;
+    let filtered = products;
     if (activeCategory !== 'all') {
-      products = products.filter(p => p.category === activeCategory);
+      filtered = filtered.filter(p => p.category === activeCategory);
     }
     if (searchText) {
       const q = searchText.toLowerCase();
-      products = products.filter(p => 
+      filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(q) || 
         p.description.toLowerCase().includes(q)
       );
     }
-    return products;
-  }, [activeCategory, searchText]);
+    return filtered;
+  }, [products, activeCategory, searchText]);
 
-  const handleAddToCart = async (product: typeof PRODUCTS[0]) => {
+  const handleAddToCart = async (product: Product) => {
     if (product.type === 'prescription') {
       const result = await petService.getPetsByOwner(user?.id || 'demo_user');
       if (result.success && result.pets && result.pets.length > 0) {
@@ -58,14 +69,20 @@ export default function ShopScreen({ navigation }: any) {
     }
   };
 
-  const renderProduct = ({ item }: { item: typeof PRODUCTS[0] }) => {
+  const renderProduct = ({ item }: { item: Product }) => {
     const cartItem = items.find(ci => ci.product.id === item.id);
     const quantity = cartItem?.quantity || 0;
 
     return (
-      <View style={styles.productCard}>
+      <TouchableOpacity
+        style={styles.productCard}
+        onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+        activeOpacity={0.8}
+      >
         <View style={[styles.productImage, { backgroundColor: item.bgColor }]}>
-          {item.imageLocal ? (
+          {item.imageUrl ? (
+            <Image source={{ uri: item.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+          ) : item.imageLocal ? (
             <Image source={item.imageLocal} style={styles.productImageThumb} resizeMode="contain" />
           ) : (
             <Icon name="medkit" size={48} color={theme.colors.primaryLight} />
@@ -130,7 +147,7 @@ export default function ShopScreen({ navigation }: any) {
             </View>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -138,8 +155,22 @@ export default function ShopScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mua thuốc</Text>
-        <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
+        {navigation.canGoBack() ? (
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.headerTitle}>Mua thuốc</Text>
+              <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.headerTitle}>Mua thuốc</Text>
+            <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
+          </>
+        )}
       </View>
 
       {/* Search + Cart */}
@@ -168,11 +199,13 @@ export default function ShopScreen({ navigation }: any) {
       </View>
 
       {/* Categories */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.catList}
-      >
+      <View style={styles.catContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.catList}
+          style={styles.catScroll}
+        >
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat.id}
@@ -191,23 +224,21 @@ export default function ShopScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
-
-      {/* Results */}
-      <Text style={styles.resultText}>
-        {filteredProducts.length} sản phẩm
-      </Text>
+        </ScrollView>
+      </View>
 
       {/* Products */}
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProduct}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.productList}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={styles.productListWrapper}>
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProduct}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.productList}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
 
       {/* Floating Cart */}
       {totalItems > 0 && (
@@ -246,6 +277,20 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadow.sm,
   },
   headerTitle: {
     fontSize: 24,
@@ -308,21 +353,32 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  catContainer: {
+    height: 48,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  catScroll: {
+    height: 48,
+  },
   catList: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingVertical: 4,
     gap: 8,
   },
   catChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.surface,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: theme.radius.pill,
+    paddingVertical: 0,
+    borderRadius: theme.radius.md,
     gap: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    height: 40,
+    width: 'auto',
   },
   catChipActive: {
     backgroundColor: theme.colors.primary,
@@ -343,6 +399,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     fontWeight: '500',
+  },
+  productListWrapper: {
+    flex: 1,
   },
   productList: {
     paddingHorizontal: 12,
