@@ -6,17 +6,12 @@ import Header from '../../components/Header';
 import Icon from '../../components/Icon';
 import QuickChatPanel from '../../components/QuickChatPanel';
 import { consultationService, messageService, orderService, petService, productService } from '../../services/firestoreService';
-import { generateConsultationReply } from '../../services/aiChatService';
+import { generateConsultationReply, buildProductsForAI } from '../../services/aiChatService';
 import { useAuth } from '../../context/AuthContext';
-import { Message, Order, Pet } from '../../types';
-import { TREATMENTS, buildQuickChatMessage, checkTreatmentPrescribed, CONDITIONS } from '../../data/quickChatData';
-
-const CONDITION_INTROS: Record<string, string> = {
-  condition_ear_mites: 'Dạ anh/chị, với tình trạng rận tai bên em có các sản phẩm sau. Anh/chị xem và chọn sản phẩm phù hợp nhé:',
-  condition_watery_eyes: 'Dạ anh/chị, với tình trạng chảy nước mắt bên em có các sản phẩm sau. Anh/chị tham khảo nhé:',
-  condition_hair_loss: 'Dạ anh/chị, với tình trạng rụng lông bên em đề xuất các sản phẩm hỗ trợ sau. Anh/chị xem qua nhé:',
-  condition_matted_fur: 'Dạ anh/chị, với tình trạng bết lông bên em có các sản phẩm chăm sóc sau. Anh/chị tham khảo nhé:',
-};
+import { Message, MessageProductLink, Order, Pet } from '../../types';
+import { CONDITIONS, buildQuickChatMessage, CONDITION_KEYWORD_MAP } from '../../data/quickChatData';
+import { PRODUCTS } from '../../data/products';
+import TreatmentBundleCard from '../../components/TreatmentBundleCard';
 
 // ─── List item types ──────────────────────────────────────────────────────────
 
@@ -65,7 +60,6 @@ function TypingIndicator() {
   const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Each dot bounces in a 900ms cycle, staggered by 150ms
     const bounce = (dot: Animated.Value, startDelay: number) =>
       Animated.loop(
         Animated.sequence([
@@ -136,7 +130,6 @@ export default function ChatScreen({ route, navigation }: any) {
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const [pet, setPet] = useState<Pet | null>(null);
-  const [prescribedMedNames, setPrescribedMedNames] = useState<string[]>([]);
   const [showQuickChat, setShowQuickChat] = useState(true);
 
   const listItems = useMemo(() => insertDateSeparators(messages), [messages]);
@@ -178,36 +171,14 @@ export default function ChatScreen({ route, navigation }: any) {
       setShowQuickChat(messageResult.messages.length <= 1);
     }
 
-    await loadPetAndPrescriptions();
+    await loadPet();
   };
 
-  const loadPetAndPrescriptions = async () => {
+  const loadPet = async () => {
     if (petId && user?.id) {
       const petResult = await petService.getPet(petId);
       if (petResult.success && petResult.pet) {
         setPet(petResult.pet);
-      }
-
-      const orderResult = await orderService.getOrdersByCustomer(user.id);
-      if (orderResult.success && orderResult.orders) {
-        const productResult = await productService.getProducts();
-        const productMap = new Map<string, string>();
-        if (productResult.success && productResult.products) {
-          productResult.products.forEach((p: { id: string; name: string }) => {
-            productMap.set(p.id, p.name);
-          });
-        }
-
-        const medNames: string[] = [];
-        orderResult.orders.forEach((order: Order) => {
-          order.items.forEach((item) => {
-            if (item.type === 'prescription' && item.petId === petId) {
-              const productName = productMap.get(item.productId);
-              if (productName) medNames.push(productName);
-            }
-          });
-        });
-        setPrescribedMedNames(medNames);
       }
     }
   };
@@ -227,7 +198,7 @@ export default function ChatScreen({ route, navigation }: any) {
   };
 
   const handleSelectCondition = async (conditionId: string) => {
-    if (!consultationId) return;
+    if (!consultationId || replyLoading) return;
 
     const condition = CONDITIONS.find(c => c.id === conditionId);
     if (!condition) return;
@@ -240,39 +211,63 @@ export default function ChatScreen({ route, navigation }: any) {
       source: 'user',
     });
     setShowQuickChat(false);
+    setReplyLoading(true);
 
-    const treatments = TREATMENTS[conditionId] || [];
-    const introText = CONDITION_INTROS[conditionId] || 'Dạ anh/chị, bên em có các sản phẩm sau phù hợp với tình trạng này:';
-
-    scheduleMessage(() => {
-      createAndAppendMessage({
-        consultationId,
-        senderId: doctorId,
-        senderRole: 'doctor',
-        text: introText,
-        source: 'doctor',
-      });
-    }, 1000);
-
-    treatments.forEach((treatment, index) => {
-      scheduleMessage(() => {
-        const prefix = checkTreatmentPrescribed(treatment, prescribedMedNames) ? ' (Đã từng kê đơn)' : '';
-        createAndAppendMessage({
-          consultationId,
-          senderId: doctorId,
-          senderRole: 'doctor',
-          text: treatment.description,
-          source: 'doctor',
-          productLink: {
-            id: treatment.id,
-            name: `${treatment.name}${prefix}`,
-            price: treatment.price,
-            description: treatment.description,
-            conditionId,
-          },
-        });
-      }, 2200 + index * 1000);
+    const conditionKeywords = CONDITION_KEYWORD_MAP[conditionId] || condition.name;
+    const filteredProducts = buildProductsForAI(PRODUCTS, {
+      species: pet?.species,
+      conditionKeywords,
+      medicalHistory: pet?.medicalHistory,
     });
+
+    const reply = await generateConsultationReply({
+      text: buildQuickChatMessage(petName, condition.name),
+      petName,
+      doctorName,
+      pet,
+      recentMessages: messages,
+      conditionName: condition.name,
+      availableProducts: filteredProducts,
+    });
+
+    const doctorMsg = await createAndAppendMessage({
+      consultationId,
+      senderId: doctorId,
+      senderRole: 'doctor',
+      text: reply.text,
+      source: reply.source,
+    });
+
+    if (reply.recommendations && reply.recommendations.length > 0) {
+      const productLinks: MessageProductLink[] = reply.recommendations
+        .map(rec => {
+          const product = PRODUCTS.find(p => p.id === rec.productId);
+          if (!product) return null;
+          return {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            description: rec.reason,
+            conditionId,
+          } as MessageProductLink;
+        })
+        .filter(Boolean) as MessageProductLink[];
+
+      if (productLinks.length > 0) {
+        scheduleMessage(() => {
+          createAndAppendMessage({
+            consultationId,
+            senderId: doctorId,
+            senderRole: 'doctor',
+            text: '',
+            source: 'ai',
+            productLinks,
+          });
+        }, 600);
+      }
+    }
+
+    setReplyLoading(false);
   };
 
   const sendMessage = async () => {
@@ -291,21 +286,57 @@ export default function ChatScreen({ route, navigation }: any) {
     setShowQuickChat(false);
     setReplyLoading(true);
 
+    const filteredProducts = buildProductsForAI(PRODUCTS, {
+      species: pet?.species,
+      conditionKeywords: text,
+      medicalHistory: pet?.medicalHistory,
+    });
+
     const reply = await generateConsultationReply({
       text,
       petName,
       doctorName,
       pet,
       recentMessages: customerMessage ? [...messages, customerMessage] : messages,
+      availableProducts: filteredProducts,
     });
 
-    await createAndAppendMessage({
+    const doctorMsg = await createAndAppendMessage({
       consultationId,
       senderId: doctorId,
       senderRole: 'doctor',
       text: reply.text,
       source: reply.source,
     });
+
+    if (reply.recommendations && reply.recommendations.length > 0) {
+      const productLinks: MessageProductLink[] = reply.recommendations
+        .map(rec => {
+          const product = PRODUCTS.find(p => p.id === rec.productId);
+          if (!product) return null;
+          return {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            description: rec.reason,
+          } as MessageProductLink;
+        })
+        .filter(Boolean) as MessageProductLink[];
+
+      if (productLinks.length > 0) {
+        scheduleMessage(() => {
+          createAndAppendMessage({
+            consultationId,
+            senderId: doctorId,
+            senderRole: 'doctor',
+            text: '',
+            source: 'ai',
+            productLinks,
+          });
+        }, 600);
+      }
+    }
+
     setReplyLoading(false);
   };
 
@@ -346,6 +377,19 @@ export default function ChatScreen({ route, navigation }: any) {
           <Text style={styles.dateSeparatorText}>{item.label}</Text>
           <View style={styles.dateSeparatorLine} />
         </View>
+      );
+    }
+
+    // Treatment bundle card — replaces multiple individual product messages
+    if (item.productLinks && item.productLinks.length > 0) {
+      const conditionId = item.productLinks[0]?.conditionId;
+      const condition = CONDITIONS.find(c => c.id === conditionId);
+      return (
+        <TreatmentBundleCard
+          conditionLabel={condition?.name || 'Gợi ý sản phẩm'}
+          products={item.productLinks}
+          onProductTap={handleProductTap}
+        />
       );
     }
 
@@ -516,7 +560,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // ─── Message containers ──────────────────────────────────────────────────
   messageContainer: {
     marginBottom: theme.spacing.md,
     maxWidth: '80%',
@@ -531,7 +574,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
 
-  // ─── Bubbles ─────────────────────────────────────────────────────────────
   messageBubble: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.lg,
@@ -582,7 +624,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
 
-  // ─── Date separator ───────────────────────────────────────────────────────
   dateSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -601,7 +642,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xs,
   },
 
-  // ─── Product card ─────────────────────────────────────────────────────────
   productCard: {
     backgroundColor: theme.colors.warningBg,
     padding: theme.spacing.md,
@@ -650,7 +690,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textOnPrimary,
   },
 
-  // ─── Scroll-to-bottom FAB ─────────────────────────────────────────────────
   scrollFab: {
     position: 'absolute',
     right: theme.spacing.lg,
@@ -664,7 +703,6 @@ const styles = StyleSheet.create({
     ...theme.shadow.md,
   },
 
-  // ─── Empty state ──────────────────────────────────────────────────────────
   emptyState: {
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xxl,
@@ -692,7 +730,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // ─── Consultation summary bar ─────────────────────────────────────────────
   consultationSummary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -709,7 +746,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primaryDarker,
   },
 
-  // ─── Input bar ────────────────────────────────────────────────────────────
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',

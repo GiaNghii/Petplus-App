@@ -321,6 +321,7 @@ export const mockMessageService = {
     senderRole: Message['senderRole'];
     text: string;
     productLink?: MessageProductLink;
+    productLinks?: MessageProductLink[];
     imageUrl?: string;
     source?: Message['source'];
   }) {
@@ -332,6 +333,7 @@ export const mockMessageService = {
       senderRole: data.senderRole,
       text: data.text,
       productLink: data.productLink,
+      productLinks: data.productLinks,
       imageUrl: data.imageUrl,
       source: data.source,
       createdAt: new Date(),

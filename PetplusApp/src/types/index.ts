@@ -95,6 +95,7 @@ export interface Message {
   senderRole: 'customer' | 'doctor';
   text: string;
   productLink?: MessageProductLink;
+  productLinks?: MessageProductLink[];
   imageUrl?: string;
   createdAt: Date;
   source?: 'user' | 'doctor' | 'ai' | 'fallback' | 'safety';
