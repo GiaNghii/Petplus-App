@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -21,6 +21,22 @@ export default function HomeScreen({ navigation }: any) {
   const [showPetDropdown, setShowPetDropdown] = useState(false);
   const [purchasedProducts, setPurchasedProducts] = useState<Product[]>([]);
   const [upcomingAppointment, setUpcomingAppointment] = useState<Appointment | null>(null);
+
+  const [flashSeconds, setFlashSeconds] = useState(2 * 60 * 60);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFlashSeconds(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const flashTimeDisplay = (() => {
+    const h = Math.floor(flashSeconds / 3600);
+    const m = Math.floor((flashSeconds % 3600) / 60);
+    const s = flashSeconds % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  })();
 
   const loadAll = useCallback(async () => {
     loadPets();
@@ -380,7 +396,7 @@ export default function HomeScreen({ navigation }: any) {
               <Icon name="flash" size={16} color={theme.colors.danger} />
               <Text style={styles.flashTitle}>Flash Sale</Text>
             </View>
-            <Text style={styles.flashTimer}>Kết thúc sau: 02:15:30</Text>
+            <Text style={styles.flashTimer}>Kết thúc sau: {flashTimeDisplay}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.flashScroll}>
             {flashProducts.map((item) => (
