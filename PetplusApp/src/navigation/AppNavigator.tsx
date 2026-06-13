@@ -48,7 +48,7 @@ const TabIcon = ({ name, focused }: { name: any; focused: boolean }) => (
   />
 );
 
-// Customer Tab Navigator — 5 tabs matching wireframe
+// Customer Tab Navigator for the single-account demo.
 function CustomerTabNavigator() {
   return (
     <Tab.Navigator
@@ -60,13 +60,13 @@ function CustomerTabNavigator() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.borderLight,
           borderTopWidth: 1,
-          height: 64,
+          height: 70,
           paddingBottom: 8,
           paddingTop: 6,
           ...theme.shadow.xs,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '500',
           marginTop: 2,
         },
@@ -84,7 +84,7 @@ function CustomerTabNavigator() {
         name="PetsTab"
         component={PetListScreen}
         options={{
-          title: 'My pet',
+          title: 'Pet',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'paw' : 'paw-outline'} focused={focused} />,
         }}
       />
@@ -92,7 +92,7 @@ function CustomerTabNavigator() {
         name="ScheduleTab"
         component={ScheduleScreen}
         options={{
-          title: 'Schedule',
+          title: 'Lịch',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} focused={focused} />,
         }}
       />
@@ -100,7 +100,7 @@ function CustomerTabNavigator() {
         name="MessageTab"
         component={DoctorSelectScreen}
         options={{
-          title: 'Message',
+          title: 'Tư vấn',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'chatbubbles' : 'chat-outline'} focused={focused} />,
         }}
       />
@@ -116,7 +116,7 @@ function CustomerTabNavigator() {
         name="ProfileTab"
         component={ProfileScreen}
         options={{
-          title: 'Account',
+          title: 'Demo',
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} focused={focused} />,
         }}
       />

@@ -7,6 +7,7 @@ import { Order } from '../../types';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Icon from '../../components/Icon';
+import { PRODUCTS } from '../../data/products';
 
 export default function OrderHistoryScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -46,6 +47,14 @@ export default function OrderHistoryScreen({ navigation }: any) {
     return map[status] || map.pending;
   };
 
+  const filteredOrders = activeTab === 'all'
+    ? orders
+    : orders.filter(order => order.status === activeTab);
+
+  const getProductName = (productId: string, fallback?: string) => {
+    return fallback || PRODUCTS.find(product => product.id === productId)?.name || `Sản phẩm ${productId}`;
+  };
+
   const renderOrder = ({ item }: { item: Order }) => {
     const status = getStatusInfo(item.status);
     return (
@@ -62,8 +71,13 @@ export default function OrderHistoryScreen({ navigation }: any) {
             <View key={index} style={styles.orderItem}>
               <Icon name="medkit" size={20} color={theme.colors.primary} />
               <Text style={styles.itemText} numberOfLines={1}>
-                {orderItem.quantity}x Thuốc #{orderItem.productId?.slice(-4)}
+                {orderItem.quantity}x {getProductName(orderItem.productId, orderItem.productName)}
               </Text>
+              {orderItem.source === 'consultation' && (
+                <View style={styles.consultBadge}>
+                  <Text style={styles.consultBadgeText}>Tư vấn</Text>
+                </View>
+              )}
             </View>
           ))}
           {item.items && item.items.length > 2 && (
@@ -136,15 +150,15 @@ export default function OrderHistoryScreen({ navigation }: any) {
         <View style={styles.loading}>
           <Text>Đang tải...</Text>
         </View>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <View style={styles.empty}>
           <Icon name="cart-outline" size={64} color={theme.colors.primary} />
-          <Text style={styles.emptyTitle}>Chưa có đơn hàng</Text>
-          <Text style={styles.emptySubtext}>Hãy mua sắm để có đơn hàng đầu tiên</Text>
+          <Text style={styles.emptyTitle}>Chưa có đơn hàng phù hợp</Text>
+          <Text style={styles.emptySubtext}>Thử đổi bộ lọc hoặc mua sản phẩm trong Shop</Text>
         </View>
       ) : (
         <FlatList
-          data={orders}
+          data={filteredOrders}
           renderItem={renderOrder}
           keyExtractor={(item) => item.id || ''}
           contentContainerStyle={styles.orderList}
@@ -247,6 +261,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
     gap: theme.spacing.sm,
+  },
+  consultBadge: {
+    backgroundColor: theme.colors.primaryBg,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.pill,
+  },
+  consultBadgeText: {
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    fontSize: 9,
   },
   itemText: {
     ...theme.typography.small,

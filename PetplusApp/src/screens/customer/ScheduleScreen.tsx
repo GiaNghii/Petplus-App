@@ -44,6 +44,7 @@ export default function ScheduleScreen({ navigation }: any) {
     if (!user?.id || loadingRef.current) return;
     loadingRef.current = true;
     try {
+    await appointmentService.normalizeAppointmentStatuses();
     const [aptResult, petResult] = await Promise.all([
       appointmentService.getAppointmentsByCustomer(user.id),
       petService.getPetsByOwner(user.id),
@@ -52,25 +53,7 @@ export default function ScheduleScreen({ navigation }: any) {
       setPets(petResult.pets);
     }
     if (aptResult.success && aptResult.appointments) {
-      const now = new Date();
       let data = aptResult.appointments;
-      let needsSave = false;
-      for (const apt of data) {
-        if (
-          (apt.status === 'pending' || apt.status === 'confirmed') &&
-          new Date(apt.dateTime) < now
-        ) {
-          await appointmentService.updateAppointmentStatus(apt.id, 'completed');
-          apt.status = 'completed';
-          needsSave = true;
-        }
-      }
-      if (needsSave) {
-        const refreshed = await appointmentService.getAppointmentsByCustomer(user.id);
-        if (refreshed.success && refreshed.appointments) {
-          data = refreshed.appointments;
-        }
-      }
       data.sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
       setAppointments(data);
     }
@@ -99,6 +82,17 @@ export default function ScheduleScreen({ navigation }: any) {
   const handleCancel = (apt: Appointment) => {
     setCancellingApt(apt);
     setShowCancelModal(true);
+  };
+
+  const startBooking = () => {
+    if (pets.length > 0) {
+      navigation.navigate('SelectBranch', {
+        petId: pets[0].id,
+        petName: pets[0].name,
+      });
+      return;
+    }
+    navigation.navigate('AddPet');
   };
 
   const confirmCancel = async () => {
@@ -211,7 +205,10 @@ export default function ScheduleScreen({ navigation }: any) {
           </View>
         ) : (
           <View style={styles.aptActions}>
-            <TouchableOpacity style={[styles.actionButton, styles.rebookButton]}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.rebookButton]}
+              onPress={startBooking}
+            >
               <Text style={styles.rebookButtonText}>Đặt lại</Text>
             </TouchableOpacity>
           </View>
@@ -227,14 +224,7 @@ export default function ScheduleScreen({ navigation }: any) {
         subtitle={`${upcoming.length} lịch sắp tới`}
         showBack={false}
         rightIcon="add"
-        onRightPress={() => {
-          if (pets.length > 0) {
-            navigation.navigate('SelectBranch', {
-              petId: pets[0].id,
-              petName: pets[0].name,
-            });
-          }
-        }}
+        onRightPress={startBooking}
       />
 
       <View style={styles.tabs}>
@@ -267,14 +257,7 @@ export default function ScheduleScreen({ navigation }: any) {
               <Text style={styles.emptyText}>Đặt lịch khám cho thú cưng của bạn</Text>
               <Button
                 title="Đặt lịch ngay"
-                onPress={() => {
-                  if (pets.length > 0) {
-                    navigation.navigate('SelectBranch', {
-                      petId: pets[0].id,
-                      petName: pets[0].name,
-                    });
-                  }
-                }}
+                onPress={startBooking}
                 icon="add"
                 style={{ marginTop: theme.spacing.lg }}
               />

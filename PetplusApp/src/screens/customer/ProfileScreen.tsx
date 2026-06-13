@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import { theme } from '../../utils/theme';
 import Icon, { IconName } from '../../components/Icon';
 import ModernCard from '../../components/ModernCard';
-import { petService } from '../../services/firestoreService';
+import { appointmentService, orderService, petService } from '../../services/firestoreService';
+import { resetDemoData } from '../../services/mockDataService';
 
 interface MenuItem {
   id: string;
@@ -16,24 +18,44 @@ interface MenuItem {
 }
 
 export default function ProfileScreen({ navigation }: any) {
-  const { user, logout } = useAuth();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { user } = useAuth();
+  const { clearCart } = useCart();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [petCount, setPetCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
+  const [appointmentCount, setAppointmentCount] = useState(0);
 
   useEffect(() => {
-    const loadPetCount = async () => {
+    const loadStats = async () => {
       if (user?.id) {
-        const result = await petService.getPetsByOwner(user.id);
-        if (result.success && result.pets) {
-          setPetCount(result.pets.length);
+        const [petResult, orderResult, appointmentResult] = await Promise.all([
+          petService.getPetsByOwner(user.id),
+          orderService.getOrdersByCustomer(user.id),
+          appointmentService.getAppointmentsByCustomer(user.id),
+        ]);
+        if (petResult.success && petResult.pets) {
+          setPetCount(petResult.pets.length);
+        }
+        if (orderResult.success && orderResult.orders) {
+          setOrderCount(orderResult.orders.length);
+        }
+        if (appointmentResult.success && appointmentResult.appointments) {
+          setAppointmentCount(appointmentResult.appointments.length);
         }
       }
     };
-    loadPetCount();
+    const unsubscribe = navigation.addListener('focus', loadStats);
+    loadStats();
+    return unsubscribe;
   }, [user]);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleResetDemo = async () => {
+    await resetDemoData();
+    clearCart();
+    setShowResetConfirm(false);
+    setPetCount(2);
+    setOrderCount(3);
+    setAppointmentCount(0);
   };
 
   const menuItems: MenuItem[] = [
@@ -68,9 +90,9 @@ export default function ProfileScreen({ navigation }: any) {
     {
       id: '5',
       icon: 'create',
-      title: 'Cài đặt',
-      subtitle: 'Thông báo, ngôn ngữ, bảo mật',
-      onPress: () => {},
+      title: 'Reset demo data',
+      subtitle: 'Khôi phục thú cưng, đơn hàng và lịch hẹn mẫu',
+      onPress: () => setShowResetConfirm(true),
     },
     {
       id: '6',
@@ -105,12 +127,12 @@ export default function ProfileScreen({ navigation }: any) {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>5</Text>
+            <Text style={styles.statNumber}>{orderCount}</Text>
             <Text style={styles.statLabel}>Đơn hàng</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>12</Text>
+            <Text style={styles.statNumber}>{appointmentCount}</Text>
             <Text style={styles.statLabel}>Lịch hẹn</Text>
           </View>
         </View>
@@ -138,40 +160,40 @@ export default function ProfileScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Logout */}
+      {/* Reset */}
       <TouchableOpacity
         style={styles.logoutBtn}
-        onPress={() => setShowLogoutConfirm(true)}
+        onPress={() => setShowResetConfirm(true)}
       >
-        <Text style={styles.logoutBtnText}>Đăng xuất</Text>
+        <Text style={styles.logoutBtnText}>Reset demo data</Text>
       </TouchableOpacity>
 
-      {/* Logout Modal */}
+      {/* Reset Modal */}
       <Modal
-        visible={showLogoutConfirm}
+        visible={showResetConfirm}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowLogoutConfirm(false)}
+        onRequestClose={() => setShowResetConfirm(false)}
       >
         <View style={styles.modalOverlay}>
           <ModernCard style={styles.modalCard} padding="xxl">
-            <Icon name="arrow-forward" size={40} color={theme.colors.danger} />
-            <Text style={styles.modalTitle}>Đăng xuất?</Text>
+            <Icon name="information-circle" size={40} color={theme.colors.primary} />
+            <Text style={styles.modalTitle}>Reset demo data?</Text>
             <Text style={styles.modalText}>
-              Bạn có chắc chắn muốn đăng xuất khỏi Petplus?
+              Thao tác này khôi phục dữ liệu demo: thú cưng mẫu, đơn hàng mẫu, xóa lịch hẹn mới và giỏ hàng hiện tại.
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
-                onPress={() => setShowLogoutConfirm(false)}
+                onPress={() => setShowResetConfirm(false)}
               >
                 <Text style={styles.cancelBtnText}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmBtn}
-                onPress={handleLogout}
+                onPress={handleResetDemo}
               >
-                <Text style={styles.confirmBtnText}>Đăng xuất</Text>
+                <Text style={styles.confirmBtnText}>Reset</Text>
               </TouchableOpacity>
             </View>
           </ModernCard>

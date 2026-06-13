@@ -1,15 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockAuthService } from '../services/authService';
 import { User } from '../types';
-
-const DEFAULT_USER: User = {
-  id: 'demo_user',
-  name: 'Nguyễn Văn A',
-  email: 'demo@petplus.vn',
-  phone: '0901234567',
-  role: 'customer',
-  createdAt: new Date('2024-01-01'),
-};
+import { DEMO_USER } from '../data/demoData';
 
 interface AuthContextType {
   user: User | null;
@@ -32,7 +24,7 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(DEFAULT_USER);
+  const [user, setUser] = useState<User | null>(DEMO_USER);
   const [loading, setLoading] = useState(false);
 
   const login = async (email: string, password: string) => {
@@ -55,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     await mockAuthService.logout();
-    setUser(null);
+    setUser(DEMO_USER);
   };
 
   return (

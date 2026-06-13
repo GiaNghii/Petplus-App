@@ -80,6 +80,27 @@ export default function HomeScreen({ navigation }: any) {
   const onlineDoctor = DOCTORS.find(d => d.status === 'online');
   const displayDoctor = onlineDoctor || DOCTORS[0];
 
+  const startBooking = () => {
+    if (!selectedPet) {
+      navigation.navigate('AddPet');
+      return;
+    }
+    navigation.navigate('SelectBranch', { petId: selectedPet.id, petName: selectedPet.name });
+  };
+
+  const startChat = (doctor = DOCTORS[0]) => {
+    if (!selectedPet) {
+      navigation.navigate('AddPet');
+      return;
+    }
+    navigation.navigate('Chat', {
+      doctorId: doctor.id,
+      doctorName: doctor.name,
+      petName: selectedPet.name,
+      petId: selectedPet.id,
+    });
+  };
+
   const flashProducts = useMemo(
     () => PRODUCTS.filter(p => p.isHot || p.isNew).slice(0, 6),
     []
@@ -171,11 +192,33 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </Modal>
 
+        <ModernCard style={styles.demoJourneyCard} padding="lg">
+          <Text style={styles.demoEyebrow}>Demo flow</Text>
+          <Text style={styles.demoTitle}>Chăm sóc {petName} trong một lượt thử</Text>
+          <Text style={styles.demoText}>
+            Bắt đầu bằng tư vấn nhanh, mua sản phẩm được gợi ý, hoặc đặt lịch khám để thấy dữ liệu demo cập nhật ngay trong app.
+          </Text>
+          <View style={styles.demoSteps}>
+            <TouchableOpacity style={styles.demoStep} onPress={() => startChat()}>
+              <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
+              <Text style={styles.demoStepText}>Tư vấn</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.demoStep} onPress={() => navigation.navigate('Shop')}>
+              <Icon name="cart" size={16} color={theme.colors.secondary} />
+              <Text style={styles.demoStepText}>Mua hàng</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.demoStep} onPress={startBooking}>
+              <Icon name="calendar" size={16} color={theme.colors.info} />
+              <Text style={styles.demoStepText}>Đặt lịch</Text>
+            </TouchableOpacity>
+          </View>
+        </ModernCard>
+
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.quickActionCard, { backgroundColor: theme.colors.primaryBg }]}
-            onPress={() => navigation.navigate('Chat', { doctorId: DOCTORS[0].id, doctorName: DOCTORS[0].name, petName: petName, petId: selectedPet?.id })}
+            onPress={() => startChat()}
           >
             <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.primary }]}>
               <Icon name="chat" size={22} color={theme.colors.textOnPrimary} />
@@ -184,11 +227,7 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickActionCard, { backgroundColor: theme.colors.secondaryBg }]}
-            onPress={() => {
-              if (selectedPet) {
-                navigation.navigate('SelectBranch', { petId: selectedPet.id, petName: selectedPet.name });
-              }
-            }}
+            onPress={startBooking}
           >
             <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.secondary }]}>
               <Icon name="calendar" size={22} color={theme.colors.textOnPrimary} />
@@ -256,10 +295,7 @@ export default function HomeScreen({ navigation }: any) {
               <Button
                 title="Đặt lịch ngay"
                 size="sm"
-                onPress={() => navigation.navigate('SelectBranch', {
-                  petId: selectedPet?.id,
-                  petName: selectedPet?.name,
-                })}
+                onPress={startBooking}
                 icon="add"
                 style={{ marginTop: theme.spacing.md }}
               />
@@ -287,7 +323,7 @@ export default function HomeScreen({ navigation }: any) {
               <Button
                 title="Chat ngay"
                 size="sm"
-                onPress={() => navigation.navigate('Chat', { doctorId: displayDoctor.id, doctorName: displayDoctor.name, petName: petName, petId: selectedPet?.id })}
+                onPress={() => startChat(displayDoctor)}
               />
             </View>
           </ModernCard>
@@ -420,6 +456,47 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: theme.radius.pill,
     gap: 6,
+  },
+  demoJourneyCard: {
+    marginHorizontal: theme.spacing.lg,
+    marginTop: -theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  demoEyebrow: {
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  demoTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  demoText: {
+    ...theme.typography.small,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+  },
+  demoSteps: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  demoStep: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingVertical: theme.spacing.sm,
+  },
+  demoStepText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
   },
   petSelectorAvatar: {
     width: 24,

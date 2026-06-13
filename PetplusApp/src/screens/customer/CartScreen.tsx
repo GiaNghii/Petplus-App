@@ -8,6 +8,7 @@ import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
+import { DEMO_DEFAULTS } from '../../data/demoData';
 
 const PAYMENT_METHODS = [
   { id: 'momo', name: 'Momo QR', subtitle: 'Quét QR thanh toán' },
@@ -25,8 +26,8 @@ export default function CartScreen({ navigation }: any) {
   const { items, updateQuantity, removeItem, totalItems, totalAmount, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [deliveryType, setDeliveryType] = useState('delivery');
-  const [address, setAddress] = useState('');
-  const [note, setNote] = useState('');
+  const [address, setAddress] = useState(DEMO_DEFAULTS.address);
+  const [note, setNote] = useState(DEMO_DEFAULTS.orderNote);
   const [loading, setLoading] = useState(false);
 
   const deliveryFee = DELIVERY_OPTIONS.find(d => d.id === deliveryType)?.fee || 0;
@@ -49,17 +50,19 @@ export default function CartScreen({ navigation }: any) {
       items: items.map(item => ({
         productId: item.product.id,
         productName: item.product.name,
-        productPrice: item.product.price,
+        productImageUrl: item.product.imageUrl,
         quantity: item.quantity,
         price: item.product.price,
         type: item.product.type,
         petId: item.selectedPetId,
+        conditionId: item.selectedConditionId,
+        source: item.source || 'shop',
       })),
       totalAmount: finalTotal,
       deliveryFee,
       paymentMethod: paymentMethod as any,
       paymentStatus: 'pending',
-      deliveryBranch: 'go-vap',
+      deliveryBranch: DEMO_DEFAULTS.branchId,
       deliveryAddress: deliveryType === 'delivery' ? address : 'Nhận tại chi nhánh',
       deliveryType: deliveryType as any,
       status: 'pending',
@@ -70,10 +73,14 @@ export default function CartScreen({ navigation }: any) {
       const orderData = {
         orderId,
         items: items.map(item => ({
+          productId: item.product.id,
           productName: item.product.name,
           quantity: item.quantity,
           price: item.product.price,
           type: item.product.type,
+          petId: item.selectedPetId,
+          conditionId: item.selectedConditionId,
+          source: item.source || 'shop',
         })),
         totalAmount,
         deliveryFee,

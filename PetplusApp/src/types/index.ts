@@ -111,10 +111,14 @@ export interface Product {
 
 export interface OrderItem {
   productId: string;
+  productName?: string;
+  productImageUrl?: string;
   quantity: number;
   price: number;
   type: 'OTC' | 'prescription';
   petId?: string; // for prescription items
+  conditionId?: string;
+  source?: 'shop' | 'consultation';
 }
 
 export interface Order {

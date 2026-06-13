@@ -53,7 +53,7 @@ export default function ShopScreen({ navigation }: any) {
             {
               text: 'Xác nhận',
               onPress: () => {
-                addItem(product, pet.id);
+                addItem(product, pet.id, { source: 'shop' });
                 Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
               },
             },
@@ -64,7 +64,7 @@ export default function ShopScreen({ navigation }: any) {
         navigation.navigate('AddPet');
       }
     } else {
-      addItem(product);
+      addItem(product, undefined, { source: 'shop' });
       Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
     }
   };

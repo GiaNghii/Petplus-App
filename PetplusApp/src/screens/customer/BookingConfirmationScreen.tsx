@@ -25,7 +25,10 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
   const [notificationMessage, setNotificationMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const doctorName = DOCTOR_NAMES[doctorId] || 'Bác sĩ';
+  const assignedDoctorId = doctorId === 'auto' ? 'dr-a' : doctorId;
+  const doctorName = doctorId === 'auto'
+    ? `${DOCTOR_NAMES[assignedDoctorId] || 'Bác sĩ'} (tự động chọn)`
+    : DOCTOR_NAMES[doctorId] || 'Bác sĩ';
   const branchName = BRANCHES[branchId] || 'Petplus';
   const petName = petDisplayName || 'Chưa có pet';
 
@@ -46,15 +49,27 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       return;
     }
 
+    if (!petId) {
+      setNotificationMessage('Vui lòng chọn thú cưng trước khi đặt lịch');
+      setIsSuccess(false);
+      setShowNotification(true);
+      setTimeout(() => {
+        setShowNotification(false);
+        navigation.navigate('MainTabs', { screen: 'PetsTab' });
+      }, 1500);
+      return;
+    }
+
     setLoading(true);
     const result = await appointmentService.createAppointment({
       branchId,
-      doctorId: doctorId === 'auto' ? 'dr-a' : doctorId,
-      petId: petId || 'unknown',
+      doctorId: assignedDoctorId,
+      petId,
       customerId: user.id,
       dateTime: buildDateTime(),
       slot,
       status: 'pending',
+      notes: doctorId === 'auto' ? 'Demo: bác sĩ được hệ thống tự động chọn theo lịch trống.' : undefined,
     });
     setLoading(false);
 

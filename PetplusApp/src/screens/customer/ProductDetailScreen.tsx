@@ -23,7 +23,16 @@ function getTreatmentImage(productId: string): any {
 }
 
 export default function ProductDetailScreen({ route, navigation }: any) {
-  const { productId, productName, productPrice, productDescription } = route.params;
+  const {
+    productId,
+    productName,
+    productPrice,
+    productDescription,
+    petId,
+    conditionId,
+    source,
+    productType,
+  } = route.params;
   const { addItem, items, updateQuantity } = useCart();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -37,7 +46,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
         name: productName,
         price: productPrice,
         description: productDescription || '',
-        type: 'OTC' as const,
+        type: (productType === 'prescription' ? 'prescription' : 'OTC') as Product['type'],
         category: 'thuoc' as const,
         stock: 0,
         rating: 0,
@@ -74,27 +83,29 @@ export default function ProductDetailScreen({ route, navigation }: any) {
     if (product.type === 'prescription') {
       Alert.alert(
         'Thuốc kê đơn',
-        `Đảm bảo thuốc này được sử dụng cho đúng thú cưng được kê đơn.`,
+        source === 'consultation'
+          ? 'Sản phẩm này đến từ tư vấn bác sĩ và sẽ được lưu theo hồ sơ thú cưng demo.'
+          : 'Đảm bảo thuốc này được sử dụng cho đúng thú cưng được kê đơn.',
         [
           { text: 'Hủy', style: 'cancel' },
           {
             text: 'Xác nhận',
             onPress: () => {
-              addItem(product);
+              addItem(product, petId, { conditionId, source: source || 'shop' });
               Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
             },
           },
         ]
       );
     } else {
-      addItem(product);
+      addItem(product, petId, { conditionId, source: source || 'shop' });
       Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
     }
   };
 
   const handleBuyNow = () => {
     if (quantity === 0) {
-      addItem(product);
+      addItem(product, petId, { conditionId, source: source || 'shop' });
     }
     navigation.navigate('Cart');
   };
@@ -178,6 +189,15 @@ export default function ProductDetailScreen({ route, navigation }: any) {
               <Text style={styles.metaText}>{product.unit}</Text>
             </View>
           </View>
+
+          {source === 'consultation' && (
+            <View style={styles.consultationBanner}>
+              <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
+              <Text style={styles.consultationText}>
+                Gợi ý từ tư vấn bác sĩ cho thú cưng đang chọn.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
@@ -439,6 +459,20 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
+  },
+  consultationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primaryBg,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  consultationText: {
+    flex: 1,
+    ...theme.typography.small,
+    color: theme.colors.primaryDarker,
   },
   addToCartBtn: {
     flex: 1,

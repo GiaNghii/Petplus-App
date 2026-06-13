@@ -17,11 +17,13 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedPetId?: string;
+  selectedConditionId?: string;
+  source?: 'shop' | 'consultation';
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (product: Product, petId?: string) => void;
+  addItem: (product: Product, petId?: string, context?: { conditionId?: string; source?: 'shop' | 'consultation' }) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, delta: number) => void;
   clearCart: () => void;
@@ -44,17 +46,29 @@ export const useCart = () => useContext(CartContext);
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addItem = (product: Product, petId?: string) => {
+  const addItem = (product: Product, petId?: string, context?: { conditionId?: string; source?: 'shop' | 'consultation' }) => {
     setItems(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         return prev.map(item =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1, selectedPetId: petId || item.selectedPetId }
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+                selectedPetId: petId || item.selectedPetId,
+                selectedConditionId: context?.conditionId || item.selectedConditionId,
+                source: context?.source || item.source,
+              }
             : item
         );
       }
-      return [...prev, { product, quantity: 1, selectedPetId: petId }];
+      return [...prev, {
+        product,
+        quantity: 1,
+        selectedPetId: petId,
+        selectedConditionId: context?.conditionId,
+        source: context?.source,
+      }];
     });
   };
 

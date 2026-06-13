@@ -172,6 +172,9 @@ const handleProductTap = (productLink: Message['productLink']) => {
       productPrice: productLink.price,
       productDescription: productLink.description,
       conditionId: productLink.conditionId,
+      petId,
+      source: 'consultation',
+      productType: 'prescription',
     });
   };
 
@@ -200,6 +203,7 @@ const handleProductTap = (productLink: Message['productLink']) => {
               <Icon name="medkit" size={22} color={theme.colors.primary} />
             </View>
             <View style={styles.productInfo}>
+              <Text style={styles.recommendationLabel}>Gợi ý điều trị</Text>
               <Text style={styles.productName}>{item.productLink.name}</Text>
               <Text style={styles.productPrice}>
                 {item.productLink.price.toLocaleString('vi-VN')}đ
@@ -256,6 +260,15 @@ const handleProductTap = (productLink: Message['productLink']) => {
           onSelectCondition={handleSelectCondition}
           onDismiss={() => setShowQuickChat(false)}
         />
+
+        {!showQuickChat && messages.some(message => message.productLink) && (
+          <View style={styles.consultationSummary}>
+            <Icon name="information-circle" size={16} color={theme.colors.primary} />
+            <Text style={styles.consultationSummaryText}>
+              Sản phẩm được mua từ tư vấn sẽ được lưu theo hồ sơ {petName}.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.attachButton}>
@@ -355,6 +368,11 @@ const styles = StyleSheet.create({
   productInfo: {
     flex: 1,
   },
+  recommendationLabel: {
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    marginBottom: 2,
+  },
   productName: {
     fontSize: 14,
     fontWeight: '600',
@@ -376,6 +394,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textOnPrimary,
+  },
+  consultationSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.primaryBg,
+  },
+  consultationSummaryText: {
+    flex: 1,
+    ...theme.typography.small,
+    color: theme.colors.primaryDarker,
   },
   inputContainer: {
     flexDirection: 'row',

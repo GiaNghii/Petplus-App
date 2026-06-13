@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { petService } from '../../services/firestoreService';
-import { Pet } from '../../types';
+import { orderService, petService } from '../../services/firestoreService';
+import { Order, Pet } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import ModernCard from '../../components/ModernCard';
@@ -26,7 +27,9 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 
 export default function PetDetailScreen({ route, navigation }: any) {
   const { petId } = route.params;
+  const { user } = useAuth();
   const [pet, setPet] = useState<Pet | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('medical');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -39,9 +42,15 @@ export default function PetDetailScreen({ route, navigation }: any) {
   }, []);
 
   const loadPet = async () => {
-    const result = await petService.getPet(petId);
+    const [result, orderResult] = await Promise.all([
+      petService.getPet(petId),
+      user?.id ? orderService.getOrdersByCustomer(user.id) : Promise.resolve({ success: false, orders: [] }),
+    ]);
     if (result.success && result.pet) {
       setPet(result.pet);
+    }
+    if (orderResult.success && orderResult.orders) {
+      setOrders(orderResult.orders as Order[]);
     }
     setLoading(false);
   };
@@ -98,6 +107,16 @@ export default function PetDetailScreen({ route, navigation }: any) {
 
   const renderMedicalTab = () => {
     const records = pet.medicalRecords || [];
+    const treatmentOrders = orders.flatMap(order =>
+      (order.items || [])
+        .filter(item => item.petId === pet.id && item.type === 'prescription')
+        .map(item => ({
+          date: order.createdAt,
+          medication: item.productName || item.productId,
+          notes: item.source === 'consultation' ? 'Đã mua từ tư vấn bác sĩ' : 'Đã mua thuốc kê đơn',
+        }))
+    );
+    const allRecords = [...treatmentOrders, ...records];
     return (
       <View>
         <View style={styles.tableHeader}>
@@ -105,10 +124,10 @@ export default function PetDetailScreen({ route, navigation }: any) {
           <Text style={[styles.tableHeaderText, { flex: 1.5 }]}>ĐƠN THUỐC</Text>
           <Text style={[styles.tableHeaderText, { flex: 1.3 }]}>CHÚ THÍCH</Text>
         </View>
-        {records.length === 0 ? (
+        {allRecords.length === 0 ? (
           <Text style={styles.emptyText}>Chưa có lịch sử khám bệnh</Text>
         ) : (
-          records.map((r, i) => (
+          allRecords.map((r, i) => (
             <View key={i} style={[styles.tableRow, i % 2 === 0 && styles.tableRowEven]}>
               <Text style={[styles.tableCell, { flex: 1.2 }]}>{formatDate(r.date)}</Text>
               <Text style={[styles.tableCellBold, { flex: 1.5 }]}>{r.medication}</Text>
