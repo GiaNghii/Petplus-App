@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
@@ -56,7 +56,6 @@ export default function ChatScreen({ route, navigation }: any) {
   const [pet, setPet] = useState<Pet | null>(null);
   const [prescribedMedNames, setPrescribedMedNames] = useState<string[]>([]);
   const [showQuickChat, setShowQuickChat] = useState(true);
-  const [showToast, setShowToast] = useState(false);
 
   useEffect(() => {
     loadPetAndPrescriptions();
@@ -156,8 +155,19 @@ export default function ChatScreen({ route, navigation }: any) {
 
     setMessages(prev => [...prev, newMessage]);
     setInputText('');
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
+
+    const replyText = AUTO_REPLIES[replyIndex % AUTO_REPLIES.length];
+    replyIndex += 1;
+
+    setTimeout(() => {
+      const autoReply: Message = {
+        id: (Date.now() + 1).toString(),
+        text: replyText,
+        sender: 'doctor',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, autoReply]);
+    }, 1500);
 
     if (showQuickChat) {
       setShowQuickChat(false);
@@ -226,13 +236,6 @@ const handleProductTap = (productLink: Message['productLink']) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Modal visible={showToast} transparent animationType="fade">
-        <View style={styles.toastOverlay}>
-          <View style={styles.toastCard}>
-            <Text style={styles.toastText}>Vui lòng chờ bác sĩ phản hồi</Text>
-          </View>
-        </View>
-      </Modal>
       <Header
         title={doctorName}
         subtitle={petName}
@@ -441,23 +444,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: theme.colors.border,
-  },
-  toastOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  toastCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.xxl,
-    paddingVertical: theme.spacing.lg,
-    ...theme.shadow.lg,
-  },
-  toastText: {
-    ...theme.typography.body,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
   },
 });
