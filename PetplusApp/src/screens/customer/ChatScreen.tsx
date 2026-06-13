@@ -173,6 +173,7 @@ const handleProductTap = (productLink: Message['productLink']) => {
       productDescription: productLink.description,
       conditionId: productLink.conditionId,
       petId,
+      petName,
       source: 'consultation',
       productType: 'prescription',
     });
