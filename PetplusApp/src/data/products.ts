@@ -418,9 +418,9 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const CATEGORIES = [
-  { id: 'all', name: 'Tất cả', emoji: '🛍️' },
-  { id: 'thuoc', name: 'Thuốc', emoji: '💊' },
-  { id: 'thucan', name: 'Thức ăn', emoji: '🍖' },
-  { id: 'phukien', name: 'Phụ kiện', emoji: '🪮' },
-  { id: 'spa', name: 'Spa', emoji: '🛁' },
+  { id: 'all',     name: 'Tất cả',   emoji: '🛍️', icon: 'cart' },
+  { id: 'thuoc',   name: 'Thuốc',    emoji: '💊',  icon: 'medkit' },
+  { id: 'thucan',  name: 'Thức ăn',  emoji: '🍖',  icon: 'heart' },
+  { id: 'phukien', name: 'Phụ kiện', emoji: '🪮',  icon: 'paw' },
+  { id: 'spa',     name: 'Spa',      emoji: '🛁',  icon: 'water' },
 ];

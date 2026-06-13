@@ -34,3 +34,25 @@
 ## Recommended Order
 
 Start with Plan 001 because every other flow depends on consistent demo state and reset behavior. Then implement Plan 002 to make the demo easier to navigate, followed by the three task journeys: shopping, booking, and consultation.
+
+---
+
+## UI / Flow Polish (Plans 006–010)
+
+A second round of improvements targeting specific UX gaps and visual polish. These are independent of each other and of plans 001–005; any can be executed in any order.
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 006  | [Booking Visual Progress Stepper](006-booking-visual-progress-stepper.md) | P2 | M | none | DONE |
+| 007  | [Chat Free-Text Auto Reply](007-chat-free-text-auto-reply.md) | P2 | S | none | DONE |
+| 008  | [Flash Sale Live Countdown](008-flash-sale-live-countdown.md) | P3 | S | none | DONE |
+| 009  | [Cart Prescription Pet Name](009-cart-prescription-pet-name.md) | P2 | S | none | DONE |
+| 010  | [Shop Category Icons](010-shop-category-icons.md) | P3 | S | none | DONE |
+
+### What each plan fixes
+
+- **006** — The 4-step booking flow (Branch → Doctor → Time → Confirm) shows only plain "Bước X / 4" text. Adds a visual segment progress bar so users know how far they are.
+- **007** — Free-text messages in Chat never get a doctor reply; the `AUTO_REPLIES` array is defined but never called. Wires it into `sendMessage` and removes the blocking toast modal.
+- **008** — The Flash Sale timer shows a static "02:15:30" that never changes. Replaces it with a live `setInterval` countdown.
+- **009** — Prescription cart items show "Kê đơn cho pet" without naming the pet. Threads the pet name through `CartItem` so the tag reads "Kê đơn cho: {name}".
+- **010** — All Shop category filter chips use the same "medkit" icon. Maps each category to a distinct Ionicons name so chips are visually distinguishable.
