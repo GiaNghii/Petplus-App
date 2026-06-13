@@ -215,7 +215,7 @@ export default function ShopScreen({ navigation }: any) {
             ]}
             onPress={() => setActiveCategory(cat.id)}
           >
-            <Icon name="medkit" size={14} color={activeCategory === cat.id ? theme.colors.textOnPrimary : theme.colors.textSecondary} />
+            <Icon name={cat.icon as any} size={14} color={activeCategory === cat.id ? theme.colors.textOnPrimary : theme.colors.textSecondary} />
             <Text style={[
               styles.catText,
               activeCategory === cat.id && styles.catTextActive,
