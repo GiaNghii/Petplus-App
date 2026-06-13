@@ -6,6 +6,7 @@ import Header from '../../components/Header';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
+import StepProgress from '../../components/StepProgress';
 import { DOCTORS } from '../../data/doctors';
 
 export default function SelectDoctorScreen({ route, navigation }: any) {
@@ -24,6 +25,7 @@ export default function SelectDoctorScreen({ route, navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.headerInfo}>
           <Text style={styles.stepText}>Bước 2 / 4</Text>
+          <StepProgress current={2} total={4} />
           <Text style={styles.title}>Chọn bác sĩ phù hợp</Text>
           <Text style={styles.subtitle}>Có thể để hệ thống tự động gán bác sĩ khả dụng</Text>
         </View>

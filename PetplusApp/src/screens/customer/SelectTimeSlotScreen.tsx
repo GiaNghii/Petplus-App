@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
+import StepProgress from '../../components/StepProgress';
 
 const SLOTS = [
   { time: '07:00 - 09:00', available: 2, total: 3 },
@@ -50,6 +51,7 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.headerInfo}>
           <Text style={styles.stepText}>Bước 3 / 4</Text>
+          <StepProgress current={3} total={4} />
           <Text style={styles.title}>Chọn ngày và giờ khám</Text>
           <Text style={styles.subtitle}>Mỗi khung giờ 2 tiếng, tối đa 3 bệnh nhân</Text>
         </View>

@@ -8,6 +8,7 @@ import { theme } from '../../utils/theme';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
+import StepProgress from '../../components/StepProgress';
 
 const BRANCHES = [
   {
@@ -83,6 +84,7 @@ export default function SelectBranchScreen({ route, navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.headerInfo}>
           <Text style={styles.stepText}>Bước 1 / 4</Text>
+          <StepProgress current={1} total={4} />
           <Text style={styles.title}>Bạn muốn khám ở chi nhánh nào?</Text>
           <Text style={styles.subtitle}>Chọn chi nhánh gần bạn nhất để thuận tiện di chuyển</Text>
         </View>
