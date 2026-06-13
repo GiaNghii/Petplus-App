@@ -85,6 +85,9 @@ export interface MessageProductLink {
   name: string;
   price: number;
   description?: string;
+  reason?: string;
+  usageGuide?: string;
+  type?: 'OTC' | 'prescription';
   conditionId?: string;
 }
 

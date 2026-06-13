@@ -27,6 +27,7 @@ const FALLBACK_REPLIES = [
 export interface AIRecommendation {
   productId: string;
   reason: string;
+  usageGuide?: string;
 }
 
 export interface GenerateReplyInput {
@@ -76,7 +77,7 @@ export async function generateConsultationReply(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-    const response = await fetch('/api/generate-consultation-reply', {
+    const response = await fetch('https://petplus-app-7ss.pages.dev/api/generate-consultation-reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,

@@ -22,7 +22,7 @@ export const DEMO_PETS: Pet[] = [
   {
     id: 'pet_1',
     ownerId: DEMO_USER.id,
-    name: 'Chí A',
+    name: 'Xe Đạp',
     species: 'dog',
     breed: 'Husky',
     weight: 20.5,

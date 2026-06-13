@@ -7,9 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import ModernCard from '../../components/ModernCard';
-import Button from '../../components/Button';
 import Icon from '../../components/Icon';
 import WeightChart from '../../components/WeightChart';
+import { DOCTORS } from '../../data/doctors';
 
 type TabKey = 'medical' | 'vaccination' | 'weight';
 
@@ -74,6 +74,16 @@ export default function PetDetailScreen({ route, navigation }: any) {
   };
 
   const handleDelete = () => setShowDeleteModal(true);
+
+  const handleStartChat = () => {
+    const doctor = DOCTORS.find(d => d.status === 'online') || DOCTORS[0];
+    navigation.navigate('Chat', {
+      doctorId: doctor.id,
+      doctorName: doctor.name,
+      petName: pet?.name,
+      petId: pet?.id,
+    });
+  };
 
   const confirmDelete = async () => {
     setShowDeleteModal(false);
@@ -213,8 +223,6 @@ export default function PetDetailScreen({ route, navigation }: any) {
       <Header
         title="Hồ sơ thú cưng"
         onBack={() => navigation.goBack()}
-        rightIcon="create"
-        onRightPress={() => navigation.navigate('AddPet', { petId: pet.id })}
       />
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
@@ -246,10 +254,24 @@ export default function PetDetailScreen({ route, navigation }: any) {
               </Text>
             </View>
           )}
-          <TouchableOpacity style={styles.chatBtn}>
-            <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
-            <Text style={styles.chatBtnText}>Chat ngay</Text>
-          </TouchableOpacity>
+          <View style={styles.profileActions}>
+            <TouchableOpacity style={styles.chatBtn} onPress={handleStartChat} activeOpacity={0.85}>
+              <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
+              <Text style={styles.chatBtnText}>Chat ngay</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => navigation.navigate('AddPet', { petId: pet.id })}
+              activeOpacity={0.85}
+            >
+              <Icon name="create" size={15} color={theme.colors.textOnPrimary} />
+              <Text style={styles.secondaryActionText}>Chỉnh sửa</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteActionBtn} onPress={handleDelete} activeOpacity={0.85}>
+              <Icon name="trash" size={15} color={theme.colors.textOnPrimary} />
+              <Text style={styles.secondaryActionText}>Xóa</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tab Navigation */}
@@ -276,23 +298,6 @@ export default function PetDetailScreen({ route, navigation }: any) {
           </ModernCard>
         </View>
 
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            title="Chỉnh sửa hồ sơ"
-            icon="create"
-            onPress={() => navigation.navigate('AddPet', { petId: pet.id })}
-            fullWidth
-          />
-          <Button
-            title="Xóa thú cưng"
-            icon="trash"
-            onPress={handleDelete}
-            variant="danger"
-            fullWidth
-            style={{ marginTop: theme.spacing.md }}
-          />
-        </View>
       </ScrollView>
 
       {/* Delete Modal */}
@@ -407,13 +412,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm + 2,
     borderRadius: theme.radius.pill,
   },
   chatBtnText: {
     ...theme.typography.smallBold,
     color: theme.colors.primary,
+  },
+  profileActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  secondaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.radius.pill,
+  },
+  deleteActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(230,57,70,0.9)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.radius.pill,
+  },
+  secondaryActionText: {
+    ...theme.typography.smallBold,
+    color: theme.colors.textOnPrimary,
   },
 
   // Tabs
@@ -560,12 +596,6 @@ const styles = StyleSheet.create({
   legendText: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
-  },
-
-  // Actions
-  actions: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxxl,
   },
 
   // Modal

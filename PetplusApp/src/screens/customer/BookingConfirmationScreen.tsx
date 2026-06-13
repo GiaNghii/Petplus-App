@@ -18,6 +18,14 @@ const BRANCHES: Record<string, string> = {
   'quan-12': 'Petplus Quận 12',
 };
 
+function buildAppointmentDateTime(date: string, slot: string) {
+  const dateObj = new Date(date);
+  const [startTime] = slot.split(' - ');
+  const [hours, minutes] = startTime.split(':').map(Number);
+  dateObj.setHours(hours, minutes, 0, 0);
+  return dateObj;
+}
+
 export default function BookingConfirmationScreen({ route, navigation }: any) {
   const { user } = useAuth();
   const { branchId, doctorId, date, dateDisplay, slot, petId, petName: petDisplayName } = route.params;
@@ -34,11 +42,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
   const petName = petDisplayName || 'Chưa có pet';
 
   const buildDateTime = () => {
-    const dateObj = new Date(date);
-    const [startTime] = slot.split(' - ');
-    const [hours, minutes] = startTime.split(':').map(Number);
-    dateObj.setHours(hours, minutes, 0, 0);
-    return dateObj;
+    return buildAppointmentDateTime(date, slot);
   };
 
   const handleConfirm = async () => {
@@ -61,13 +65,25 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       return;
     }
 
+    const appointmentDateTime = buildDateTime();
+    if (appointmentDateTime.getTime() <= Date.now()) {
+      setNotificationMessage('Khung giờ này đã qua. Anh/chị vui lòng chọn khung giờ khác.');
+      setIsSuccess(false);
+      setShowNotification(true);
+      setTimeout(() => {
+        setShowNotification(false);
+        navigation.goBack();
+      }, 1800);
+      return;
+    }
+
     setLoading(true);
     const result = await appointmentService.createAppointment({
       branchId,
       doctorId: assignedDoctorId,
       petId,
       customerId: user.id,
-      dateTime: buildDateTime(),
+      dateTime: appointmentDateTime,
       slot,
       status: 'pending',
       notes: doctorId === 'auto' ? 'Demo: bác sĩ được hệ thống tự động chọn theo lịch trống.' : undefined,

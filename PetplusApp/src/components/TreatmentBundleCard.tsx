@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
@@ -47,59 +46,63 @@ export default function TreatmentBundleCard({
         </View>
       </View>
 
-      {/* ── Product horizontal scroll ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.productList}
-        decelerationRate="fast"
-        snapToInterval={156} // card width + gap
-        snapToAlignment="start"
-      >
+      <View style={styles.productList}>
         {products.map((product, index) => (
           <TouchableOpacity
             key={product.id}
-            style={styles.productCard}
+            style={[
+              styles.productCard,
+              { borderLeftColor: CARD_ACCENTS[index % CARD_ACCENTS.length] },
+            ]}
             onPress={() => onProductTap(product)}
             activeOpacity={0.85}
           >
-            {/* Coloured top strip */}
-            <View style={[styles.cardTopStrip, { backgroundColor: CARD_ACCENTS[index % CARD_ACCENTS.length] }]}>
+            <View style={styles.cardTopStrip}>
               <View style={styles.numberBadge}>
                 <Text style={styles.numberText}>{index + 1}</Text>
               </View>
-              <View style={styles.medkitWrap}>
-                <Icon name="medkit" size={18} color={theme.colors.primary} />
-              </View>
-            </View>
-
-            {/* Card body */}
-            <View style={styles.cardBody}>
-              <Text style={styles.productName} numberOfLines={2}>
-                {product.name}
-              </Text>
-
-              {product.description ? (
-                <Text style={styles.productDesc} numberOfLines={3}>
-                  {product.description}
+              <View style={styles.productTitleWrap}>
+                <Text style={styles.productName}>
+                  {product.name}
                 </Text>
-              ) : null}
-
-              <View style={styles.cardFooter}>
                 <Text style={styles.productPrice}>
                   {product.price.toLocaleString('vi-VN')}đ
                 </Text>
-                <View style={styles.buyBtn}>
-                  <Text style={styles.buyBtnText}>Mua</Text>
+              </View>
+              <View style={styles.buyBtn}>
+                <Text style={styles.buyBtnText}>Mua</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBody}>
+              {(product.reason || product.description) ? (
+                <View style={styles.explainBlock}>
+                  <Text style={styles.explainLabel}>Vì sao gợi ý</Text>
+                  <Text style={styles.explainText}>
+                    {product.reason || product.description}
+                  </Text>
                 </View>
+              ) : null}
+
+              {product.usageGuide ? (
+                <View style={styles.explainBlock}>
+                  <Text style={styles.explainLabel}>Cách dùng an toàn</Text>
+                  <Text style={styles.explainText}>
+                    {product.usageGuide}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.safetyNote}>
+                <Icon name="information-circle" size={13} color={theme.colors.primary} />
+                <Text style={styles.safetyNoteText}>
+                  Không tự tăng liều. Nếu triệu chứng nặng hơn, đưa thú cưng đến Petplus để bác sĩ kiểm tra.
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
         ))}
-
-        {/* Trailing spacer so last card isn't flush against edge */}
-        <View style={styles.trailingSpace} />
-      </ScrollView>
+      </View>
 
       {/* ── Footer hint ── */}
       <View style={styles.footer}>
@@ -182,31 +185,28 @@ const styles = StyleSheet.create({
 
   // ── Product list ─────────────────────────────────────────────────────────
   productList: {
-    paddingLeft: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
     gap: theme.spacing.sm,
-  },
-  trailingSpace: {
-    width: theme.spacing.md,
   },
 
   // ── Each product card ────────────────────────────────────────────────────
   productCard: {
-    width: 148,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
+    borderLeftWidth: 5,
     overflow: 'hidden',
     ...theme.shadow.xs,
   },
   cardTopStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   numberBadge: {
     width: 22,
@@ -221,41 +221,46 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: theme.colors.textOnPrimary,
   },
-  medkitWrap: {
-    opacity: 0.6,
+  productTitleWrap: {
+    flex: 1,
   },
   cardBody: {
-    padding: theme.spacing.sm,
-    paddingTop: theme.spacing.xs,
-    flex: 1,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   productName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
     color: theme.colors.textPrimary,
+    lineHeight: 19,
+  },
+  explainBlock: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+  },
+  explainLabel: {
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    marginBottom: 3,
+  },
+  explainText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
     lineHeight: 18,
   },
-  productDesc: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-    lineHeight: 15,
-    marginTop: 4,
-    flex: 1,
-  },
-  cardFooter: {
-    marginTop: theme.spacing.sm,
-    gap: 5,
-  },
   productPrice: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: theme.colors.primary,
     letterSpacing: -0.3,
+    marginTop: 2,
   },
   buyBtn: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.radius.sm,
-    paddingVertical: 6,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     alignItems: 'center',
   },
   buyBtnText: {
@@ -263,6 +268,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textOnPrimary,
     letterSpacing: 0.3,
+  },
+  safetyNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 5,
+    paddingTop: theme.spacing.xs,
+  },
+  safetyNoteText: {
+    flex: 1,
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    lineHeight: 15,
   },
 
   // ── Footer ───────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
 import Button from '../../components/Button';
 import { DOCTOR_NAMES } from '../../data/doctors';
+import { useResponsive, desktopContainer } from '../../utils/responsive';
 
 const BRANCHES: Record<string, string> = {
   'go-vap': 'Petplus Gò Vấp',
@@ -29,6 +30,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function ScheduleScreen({ navigation }: any) {
   const { user } = useAuth();
+  const { isDesktop, width } = useResponsive();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -150,40 +152,51 @@ export default function ScheduleScreen({ navigation }: any) {
     setShowEditModal(false);
   };
 
+  const activeList = activeTab === 'upcoming' ? upcoming : history;
+  // Use 2-column grid on desktop when more than 2 items
+  const useGrid = isDesktop && activeList.length > 2;
+
   const renderAppointment = (apt: Appointment) => {
     const status = STATUS_CONFIG[apt.status];
     const date = new Date(apt.dateTime).toLocaleDateString('vi-VN');
     const petName = getPetName(apt.petId);
 
     return (
-      <ModernCard key={apt.id} style={styles.appointmentCard}>
+      <ModernCard
+        key={apt.id}
+        style={[
+          styles.appointmentCard,
+          isDesktop && styles.appointmentCardDesktop,
+          useGrid && styles.appointmentCardGrid,
+        ]}
+      >
         <View style={styles.aptHeader}>
           <View style={styles.aptPet}>
-            <Icon name="paw" size={24} color={theme.colors.primary} />
-            <Text style={styles.aptPetName}>{petName}</Text>
+            <Icon name="paw" size={isDesktop ? 28 : 24} color={theme.colors.primary} />
+            <Text style={[styles.aptPetName, isDesktop && styles.aptPetNameDesktop]}>{petName}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+            <Text style={[styles.statusText, isDesktop && styles.statusTextDesktop, { color: status.color }]}>{status.label}</Text>
           </View>
         </View>
 
-        <View style={styles.aptDetails}>
+        <View style={[styles.aptDetails, isDesktop && styles.aptDetailsDesktop]}>
           <View style={styles.aptDetailRow}>
-            <Icon name="location" size={16} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{BRANCHES[apt.branchId]}</Text>
+            <Icon name="location" size={isDesktop ? 18 : 16} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, isDesktop && styles.detailTextDesktop]}>{BRANCHES[apt.branchId]}</Text>
           </View>
           <View style={styles.aptDetailRow}>
-            <Icon name="medical" size={16} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{DOCTOR_NAMES[apt.doctorId]}</Text>
+            <Icon name="medical" size={isDesktop ? 18 : 16} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, isDesktop && styles.detailTextDesktop]}>{DOCTOR_NAMES[apt.doctorId]}</Text>
           </View>
           <View style={styles.aptDetailRow}>
-            <Icon name="calendar" size={16} color={theme.colors.textSecondary} />
-            <Text style={styles.detailText}>{date} • {apt.slot}</Text>
+            <Icon name="calendar" size={isDesktop ? 18 : 16} color={theme.colors.textSecondary} />
+            <Text style={[styles.detailText, isDesktop && styles.detailTextDesktop]}>{date} • {apt.slot}</Text>
           </View>
           {apt.notes ? (
             <View style={styles.aptDetailRow}>
-              <Icon name="medkit" size={16} color={theme.colors.textSecondary} />
-              <Text style={styles.detailText}>{apt.notes}</Text>
+              <Icon name="medkit" size={isDesktop ? 18 : 16} color={theme.colors.textSecondary} />
+              <Text style={[styles.detailText, isDesktop && styles.detailTextDesktop]}>{apt.notes}</Text>
             </View>
           ) : null}
         </View>
@@ -191,31 +204,67 @@ export default function ScheduleScreen({ navigation }: any) {
         {apt.status === 'pending' || apt.status === 'confirmed' ? (
           <View style={styles.aptActions}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.cancelButton]}
+              style={[styles.actionButton, styles.cancelButton, isDesktop && styles.actionButtonDesktop]}
               onPress={() => handleCancel(apt)}
             >
-              <Text style={styles.cancelButtonText}>Hủy lịch</Text>
+              <Text style={[styles.cancelButtonText, isDesktop && styles.actionButtonTextDesktop]}>Hủy lịch</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButton, styles.detailButton]}
+              style={[styles.actionButton, styles.detailButton, isDesktop && styles.actionButtonDesktop]}
               onPress={() => openEditModal(apt)}
             >
-              <Text style={styles.detailButtonText}>Chỉnh sửa</Text>
+              <Text style={[styles.detailButtonText, isDesktop && styles.actionButtonTextDesktop]}>Chỉnh sửa</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.aptActions}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.rebookButton]}
+              style={[styles.actionButton, styles.rebookButton, isDesktop && styles.actionButtonDesktop]}
               onPress={startBooking}
             >
-              <Text style={styles.rebookButtonText}>Đặt lại</Text>
+              <Text style={[styles.rebookButtonText, isDesktop && styles.actionButtonTextDesktop]}>Đặt lại</Text>
             </TouchableOpacity>
           </View>
         )}
       </ModernCard>
     );
   };
+
+  const renderTabPanel = () => (
+    <>
+      {activeTab === 'upcoming' ? (
+        upcoming.length > 0 ? (
+          <View style={useGrid ? styles.cardGrid : undefined}>
+            {upcoming.map(renderAppointment)}
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Icon name="calendar-outline" size={isDesktop ? 80 : 64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
+            <Text style={[styles.emptyTitle, isDesktop && styles.emptyTitleDesktop]}>Chưa có lịch hẹn nào</Text>
+            <Text style={[styles.emptyText, isDesktop && styles.emptyTextDesktop]}>Đặt lịch khám cho thú cưng của bạn</Text>
+            <Button
+              title="Đặt lịch ngay"
+              onPress={startBooking}
+              icon="add"
+              style={{ marginTop: theme.spacing.lg }}
+            />
+          </View>
+        )
+      ) : (
+        history.length > 0 ? (
+          <View style={useGrid ? styles.cardGrid : undefined}>
+            {history.map(renderAppointment)}
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <Icon name="calendar" size={isDesktop ? 80 : 64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
+            <Text style={[styles.emptyTitle, isDesktop && styles.emptyTitleDesktop]}>Chưa có lịch sử</Text>
+            <Text style={[styles.emptyText, isDesktop && styles.emptyTextDesktop]}>Lịch sử khám sẽ hiển thị ở đây</Text>
+          </View>
+        )
+      )}
+    </>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -227,54 +276,99 @@ export default function ScheduleScreen({ navigation }: any) {
         onRightPress={startBooking}
       />
 
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
-          onPress={() => setActiveTab('upcoming')}
-        >
-          <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
-            Sắp tới ({upcoming.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-          onPress={() => setActiveTab('history')}
-        >
-          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
-            Lịch sử ({history.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {isDesktop ? (
+        /* Desktop: two-panel layout inside max-width container */
+        <View style={[desktopContainer, styles.desktopWrapper]}>
+          {/* Left panel: 40% - tabs + summary */}
+          <View style={styles.leftPanel}>
+            <View style={styles.leftPanelHeader}>
+              <Text style={styles.leftPanelTitle}>Lịch hẹn</Text>
+              <Text style={styles.leftPanelSubtitle}>{upcoming.length} lịch sắp tới</Text>
+            </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        {activeTab === 'upcoming' ? (
-          upcoming.length > 0 ? (
-            upcoming.map(renderAppointment)
-          ) : (
-            <View style={styles.empty}>
-              <Icon name="calendar-outline" size={64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
-              <Text style={styles.emptyTitle}>Chưa có lịch hẹn nào</Text>
-              <Text style={styles.emptyText}>Đặt lịch khám cho thú cưng của bạn</Text>
-              <Button
-                title="Đặt lịch ngay"
-                onPress={startBooking}
-                icon="add"
-                style={{ marginTop: theme.spacing.lg }}
-              />
+            <View style={styles.tabsDesktop}>
+              <TouchableOpacity
+                style={[styles.tabDesktop, activeTab === 'upcoming' && styles.tabDesktopActive]}
+                onPress={() => setActiveTab('upcoming')}
+              >
+                <Icon
+                  name="calendar"
+                  size={18}
+                  color={activeTab === 'upcoming' ? theme.colors.primaryDarker : theme.colors.textSecondary}
+                />
+                <Text style={[styles.tabDesktopText, activeTab === 'upcoming' && styles.tabDesktopTextActive]}>
+                  Sắp tới
+                </Text>
+                <View style={[styles.tabBadge, activeTab === 'upcoming' && styles.tabBadgeActive]}>
+                  <Text style={[styles.tabBadgeText, activeTab === 'upcoming' && styles.tabBadgeTextActive]}>
+                    {upcoming.length}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.tabDesktop, activeTab === 'history' && styles.tabDesktopActive]}
+                onPress={() => setActiveTab('history')}
+              >
+                <Icon
+                  name="time"
+                  size={18}
+                  color={activeTab === 'history' ? theme.colors.primaryDarker : theme.colors.textSecondary}
+                />
+                <Text style={[styles.tabDesktopText, activeTab === 'history' && styles.tabDesktopTextActive]}>
+                  Lịch sử
+                </Text>
+                <View style={[styles.tabBadge, activeTab === 'history' && styles.tabBadgeActive]}>
+                  <Text style={[styles.tabBadgeText, activeTab === 'history' && styles.tabBadgeTextActive]}>
+                    {history.length}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
-          )
-        ) : (
-          history.length > 0 ? (
-            history.map(renderAppointment)
-          ) : (
-            <View style={styles.empty}>
-              <Icon name="calendar" size={64} color={theme.colors.border} style={{ marginBottom: theme.spacing.lg }} />
-              <Text style={styles.emptyTitle}>Chưa có lịch sử</Text>
-              <Text style={styles.emptyText}>Lịch sử khám sẽ hiển thị ở đây</Text>
-            </View>
-          )
-        )}
-      </ScrollView>
+
+            {/* Quick booking CTA */}
+            <TouchableOpacity style={styles.desktopBookingCta} onPress={startBooking}>
+              <Icon name="add-circle" size={20} color={theme.colors.textOnPrimary} />
+              <Text style={styles.desktopBookingCtaText}>Đặt lịch mới</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Right panel: 60% - appointment list */}
+          <ScrollView
+            style={styles.rightPanel}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.rightPanelContent}
+          >
+            {renderTabPanel()}
+          </ScrollView>
+        </View>
+      ) : (
+        /* Mobile: original single-column layout */
+        <>
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'upcoming' && styles.tabActive]}
+              onPress={() => setActiveTab('upcoming')}
+            >
+              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
+                Sắp tới ({upcoming.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'history' && styles.tabActive]}
+              onPress={() => setActiveTab('history')}
+            >
+              <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
+                Lịch sử ({history.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+            {renderTabPanel()}
+          </ScrollView>
+        </>
+      )}
 
       <Modal
         visible={showCancelModal}
@@ -318,7 +412,7 @@ export default function ScheduleScreen({ navigation }: any) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isDesktop && styles.modalContentDesktop]}>
             <View style={styles.modalHandle} />
 
             {showConfirm ? (
@@ -447,6 +541,111 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+
+  // ─── Desktop two-panel layout ───────────────────────────────────────────────
+  desktopWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingHorizontal: 48,
+    paddingTop: theme.spacing.xl,
+    gap: 32,
+  },
+  leftPanel: {
+    width: '40%',
+    flexShrink: 0,
+  },
+  leftPanelHeader: {
+    marginBottom: theme.spacing.xl,
+  },
+  leftPanelTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  leftPanelSubtitle: {
+    fontSize: 15,
+    color: theme.colors.textSecondary,
+  },
+  tabsDesktop: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xl,
+  },
+  tabDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderLight,
+  },
+  tabDesktopActive: {
+    backgroundColor: theme.colors.primaryBg,
+    borderColor: theme.colors.primary,
+  },
+  tabDesktopText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+  },
+  tabDesktopTextActive: {
+    color: theme.colors.primaryDarker,
+    fontWeight: '600',
+  },
+  tabBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  tabBadgeActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+  },
+  tabBadgeTextActive: {
+    color: theme.colors.textOnPrimary,
+  },
+  desktopBookingCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.primary,
+  },
+  desktopBookingCtaText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+  },
+  rightPanel: {
+    flex: 1,
+  },
+  rightPanelContent: {
+    paddingBottom: theme.spacing.xxxl,
+  },
+
+  // ─── 2-column grid for desktop when >2 items ────────────────────────────────
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.lg,
+  },
+
+  // ─── Mobile tabs ────────────────────────────────────────────────────────────
   tabs: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
@@ -475,8 +674,18 @@ const styles = StyleSheet.create({
   content: {
     padding: theme.spacing.lg,
   },
+
+  // ─── Appointment card ────────────────────────────────────────────────────────
   appointmentCard: {
     marginBottom: theme.spacing.md,
+  },
+  appointmentCardDesktop: {
+    marginBottom: 0,
+  },
+  appointmentCardGrid: {
+    // Each grid card takes ~half width minus gap (gap handled by parent flexWrap)
+    flexBasis: '47%',
+    flexGrow: 1,
   },
   aptHeader: {
     flexDirection: 'row',
@@ -494,6 +703,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textPrimary,
   },
+  aptPetNameDesktop: {
+    fontSize: 18,
+  },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -503,9 +715,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  statusTextDesktop: {
+    fontSize: 13,
+  },
   aptDetails: {
     gap: 8,
     marginBottom: theme.spacing.md,
+  },
+  aptDetailsDesktop: {
+    gap: 10,
   },
   aptDetailRow: {
     flexDirection: 'row',
@@ -516,6 +734,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
   },
+  detailTextDesktop: {
+    fontSize: 15,
+  },
   aptActions: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
@@ -525,6 +746,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: theme.radius.md,
     alignItems: 'center',
+  },
+  actionButtonDesktop: {
+    paddingVertical: 12,
+  },
+  actionButtonTextDesktop: {
+    fontSize: 14,
   },
   cancelButton: {
     backgroundColor: theme.colors.dangerBg,
@@ -559,11 +786,19 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
   },
+  emptyTitleDesktop: {
+    fontSize: 22,
+  },
   emptyText: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
+  emptyTextDesktop: {
+    fontSize: 16,
+  },
+
+  // ─── Modals ──────────────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -576,6 +811,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingBottom: theme.spacing.xxxl,
     maxHeight: '85%',
+  },
+  modalContentDesktop: {
+    // Center the modal on desktop as a dialog
+    alignSelf: 'center',
+    borderRadius: theme.radius.xxl,
+    width: '100%',
+    maxWidth: 560,
+    marginBottom: 'auto',
+    marginTop: 'auto',
   },
   modalHandle: {
     width: 40,

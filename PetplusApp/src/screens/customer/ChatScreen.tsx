@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, Animated, View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
@@ -197,6 +197,93 @@ export default function ChatScreen({ route, navigation }: any) {
     timeoutRefs.current.push(timeoutId);
   };
 
+  const showResetNotice = (title: string, message: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+      return;
+    }
+
+    Alert.alert(title, message);
+  };
+
+  const resetChatMessages = async () => {
+    if (!consultationId) {
+      showResetNotice('Chat chưa sẵn sàng', 'Petplus đang tải cuộc trò chuyện. Anh/chị thử lại sau vài giây nhé.');
+      return;
+    }
+
+    if (replyLoading) {
+      showResetNotice('Bác sĩ đang phản hồi', 'Anh/chị chờ Petplus trả lời xong rồi đặt lại chat nhé.');
+      return;
+    }
+
+    timeoutRefs.current.forEach(clearTimeout);
+    timeoutRefs.current = [];
+    setReplyLoading(false);
+
+    const clearResult = await messageService.clearMessagesByConsultation(consultationId);
+    if (!clearResult.success) {
+      showResetNotice('Chưa thể đặt lại chat', 'Petplus chưa xoá được nội dung chat. Anh/chị thử lại sau nhé.');
+      return;
+    }
+
+    await messageService.ensureWelcomeMessage({
+      consultationId,
+      doctorId,
+      doctorName,
+      petName,
+    });
+
+    const messageResult = await messageService.getMessagesByConsultation(consultationId);
+    if (messageResult.success && messageResult.messages) {
+      setMessages(messageResult.messages);
+      setShowQuickChat(true);
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
+  };
+
+  const confirmResetChat = () => {
+    if (!consultationId) {
+      showResetNotice('Chat chưa sẵn sàng', 'Petplus đang tải cuộc trò chuyện. Anh/chị thử lại sau vài giây nhé.');
+      return;
+    }
+
+    if (replyLoading) {
+      showResetNotice('Bác sĩ đang phản hồi', 'Anh/chị chờ Petplus trả lời xong rồi đặt lại chat nhé.');
+      return;
+    }
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const shouldReset = window.confirm(
+        'Đặt lại chat?\n\nPetplus sẽ xoá nội dung tư vấn hiện tại và bắt đầu lại cuộc trò chuyện cho thú cưng này.'
+      );
+
+      if (shouldReset) {
+        resetChatMessages();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Đặt lại chat?',
+      'Petplus sẽ xoá nội dung tư vấn hiện tại và bắt đầu lại cuộc trò chuyện cho thú cưng này.',
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        { text: 'Đặt lại', style: 'destructive', onPress: resetChatMessages },
+      ]
+    );
+  };
+
+  const handleInputKeyPress = (event: any) => {
+    if (Platform.OS !== 'web') return;
+
+    const nativeEvent = event.nativeEvent || {};
+    if (nativeEvent.key === 'Enter' && !nativeEvent.shiftKey) {
+      event.preventDefault?.();
+      sendMessage();
+    }
+  };
+
   const handleSelectCondition = async (conditionId: string) => {
     if (!consultationId || replyLoading) return;
 
@@ -248,6 +335,9 @@ export default function ChatScreen({ route, navigation }: any) {
             name: product.name,
             price: product.price,
             description: rec.reason,
+            reason: rec.reason,
+            usageGuide: rec.usageGuide,
+            type: product.type,
             conditionId,
           } as MessageProductLink;
         })
@@ -319,6 +409,9 @@ export default function ChatScreen({ route, navigation }: any) {
             name: product.name,
             price: product.price,
             description: rec.reason,
+            reason: rec.reason,
+            usageGuide: rec.usageGuide,
+            type: product.type,
           } as MessageProductLink;
         })
         .filter(Boolean) as MessageProductLink[];
@@ -351,7 +444,7 @@ export default function ChatScreen({ route, navigation }: any) {
       petId,
       petName,
       source: 'consultation',
-      productType: 'prescription',
+      productType: productLink.type || 'OTC',
     });
   };
 
@@ -452,6 +545,8 @@ export default function ChatScreen({ route, navigation }: any) {
         title={doctorName}
         subtitle={petName}
         onBack={() => navigation.goBack()}
+        rightIcon="trash"
+        onRightPress={confirmResetChat}
         variant="primary"
       />
 
@@ -508,7 +603,7 @@ export default function ChatScreen({ route, navigation }: any) {
           onDismiss={() => setShowQuickChat(false)}
         />
 
-        {!showQuickChat && messages.some(message => message.productLink) && (
+        {!showQuickChat && messages.some(message => message.productLink || (message.productLinks && message.productLinks.length > 0)) && (
           <View style={styles.consultationSummary}>
             <Icon name="information-circle" size={16} color={theme.colors.primary} />
             <Text style={styles.consultationSummaryText}>
@@ -526,6 +621,10 @@ export default function ChatScreen({ route, navigation }: any) {
             placeholder="Nhập tin nhắn..."
             value={inputText}
             onChangeText={setInputText}
+            onKeyPress={handleInputKeyPress}
+            onSubmitEditing={sendMessage}
+            returnKeyType="send"
+            blurOnSubmit={false}
             multiline
           />
           <TouchableOpacity

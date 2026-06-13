@@ -6,6 +6,7 @@ import { useCart } from '../../context/CartContext';
 import { petService, productService } from '../../services/firestoreService';
 import { theme } from '../../utils/theme';
 import { PRODUCTS, CATEGORIES, Product } from '../../data/products';
+import { useResponsive, BREAKPOINTS } from '../../utils/responsive';
 import Icon from '../../components/Icon';
 
 export default function ShopScreen({ navigation }: any) {
@@ -15,6 +16,13 @@ export default function ShopScreen({ navigation }: any) {
   const [searchText, setSearchText] = useState('');
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [loading, setLoading] = useState(true);
+
+  const { width, isDesktop, isTablet } = useResponsive();
+
+  // Resolve column count based on breakpoints
+  const numColumns = width >= BREAKPOINTS.lg ? 4 : width >= BREAKPOINTS.md ? 3 : 2;
+  // isDesktop from responsive.ts is >=768; we add a true desktop check at lg
+  const isTrueDesktop = width >= BREAKPOINTS.lg;
 
   useEffect(() => {
     productService.getProducts().then(result => {
@@ -32,8 +40,8 @@ export default function ShopScreen({ navigation }: any) {
     }
     if (searchText) {
       const q = searchText.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(q) || 
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q)
       );
     }
@@ -75,17 +83,17 @@ export default function ShopScreen({ navigation }: any) {
 
     return (
       <TouchableOpacity
-        style={styles.productCard}
+        style={[styles.productCard, isTrueDesktop && styles.productCardDesktop]}
         onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
         activeOpacity={0.8}
       >
-        <View style={[styles.productImage, { backgroundColor: item.bgColor }]}>
+        <View style={[styles.productImage, isTrueDesktop && styles.productImageDesktop, { backgroundColor: item.bgColor }]}>
           {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.productImageThumb} resizeMode="contain" />
+            <Image source={{ uri: item.imageUrl }} style={[styles.productImageThumb, isTrueDesktop && styles.productImageThumbDesktop]} resizeMode="contain" />
           ) : item.imageLocal ? (
-            <Image source={item.imageLocal} style={styles.productImageThumb} resizeMode="contain" />
+            <Image source={item.imageLocal} style={[styles.productImageThumb, isTrueDesktop && styles.productImageThumbDesktop]} resizeMode="contain" />
           ) : (
-            <Icon name="medkit" size={48} color={theme.colors.primaryLight} />
+            <Icon name="medkit" size={isTrueDesktop ? 64 : 48} color={theme.colors.primaryLight} />
           )}
           {item.discount && (
             <View style={styles.discountBadge}>
@@ -108,26 +116,26 @@ export default function ShopScreen({ navigation }: any) {
             </View>
           )}
         </View>
-        <View style={styles.productContent}>
-          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        <View style={[styles.productContent, isTrueDesktop && styles.productContentDesktop]}>
+          <Text style={[styles.productName, isTrueDesktop && styles.productNameDesktop]} numberOfLines={2}>{item.name}</Text>
           <View style={styles.ratingRow}>
             <Icon name="star" size={11} color={theme.colors.warning} />
             <Text style={styles.ratingText}>{item.rating}</Text>
             <Text style={styles.reviewCount}>({item.reviews})</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{item.price.toLocaleString('vi-VN')}₫</Text>
+            <Text style={[styles.price, isTrueDesktop && styles.priceDesktop]}>{item.price.toLocaleString('vi-VN')}₫</Text>
             {item.originalPrice && (
               <Text style={styles.oldPrice}>{item.originalPrice.toLocaleString('vi-VN')}₫</Text>
             )}
           </View>
           {quantity === 0 ? (
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, isTrueDesktop && styles.addButtonDesktop]}
               onPress={() => handleAddToCart(item)}
             >
-              <Icon name="cart" size={14} color={theme.colors.textOnPrimary} />
-              <Text style={styles.addButtonText}>Thêm</Text>
+              <Icon name="cart" size={isTrueDesktop ? 16 : 14} color={theme.colors.textOnPrimary} />
+              <Text style={[styles.addButtonText, isTrueDesktop && styles.addButtonTextDesktop]}>Thêm vào giỏ</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.qtyControl}>
@@ -151,61 +159,44 @@ export default function ShopScreen({ navigation }: any) {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        {navigation.canGoBack() ? (
-          <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-              <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
-            </TouchableOpacity>
-            <View>
-              <Text style={styles.headerTitle}>Mua thuốc</Text>
-              <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
-            </View>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.headerTitle}>Mua thuốc</Text>
-            <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
-          </>
-        )}
-      </View>
-
-      {/* Search + Cart */}
-      <View style={styles.toolbar}>
-        <View style={styles.searchBar}>
-          <Icon name="search" size={16} color={theme.colors.textTertiary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm thuốc theo tên hoặc triệu chứng..."
-            placeholderTextColor={theme.colors.textTertiary}
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-        </View>
+  // Sidebar categories for desktop
+  const renderCategorySidebar = () => (
+    <View style={styles.sidebar}>
+      <Text style={styles.sidebarTitle}>Danh mục</Text>
+      {CATEGORIES.map((cat) => (
         <TouchableOpacity
-          style={styles.cartBtn}
-          onPress={() => navigation.navigate('Cart')}
+          key={cat.id}
+          style={[
+            styles.sidebarItem,
+            activeCategory === cat.id && styles.sidebarItemActive,
+          ]}
+          onPress={() => setActiveCategory(cat.id)}
         >
-          <Icon name="cart" size={20} color={theme.colors.textPrimary} />
-          {totalItems > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{totalItems}</Text>
-            </View>
-          )}
+          <Icon
+            name={cat.icon as any}
+            size={16}
+            color={activeCategory === cat.id ? theme.colors.primary : theme.colors.textSecondary}
+          />
+          <Text style={[
+            styles.sidebarItemText,
+            activeCategory === cat.id && styles.sidebarItemTextActive,
+          ]}>
+            {cat.name}
+          </Text>
         </TouchableOpacity>
-      </View>
+      ))}
+    </View>
+  );
 
-      {/* Categories */}
-      <View style={styles.catContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catList}
-          style={styles.catScroll}
-        >
+  // Horizontal chip categories for mobile/tablet
+  const renderCategoryChips = () => (
+    <View style={styles.catContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.catList}
+        style={styles.catScroll}
+      >
         {CATEGORIES.map((cat) => (
           <TouchableOpacity
             key={cat.id}
@@ -224,26 +215,91 @@ export default function ShopScreen({ navigation }: any) {
             </Text>
           </TouchableOpacity>
         ))}
-        </ScrollView>
-      </View>
+      </ScrollView>
+    </View>
+  );
 
-      {/* Products */}
-      <View style={styles.productListWrapper}>
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderProduct}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.productList}
-          showsVerticalScrollIndicator={false}
-        />
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Centered max-width wrapper */}
+      <View style={styles.pageWrapper}>
+
+        {/* Header */}
+        <View style={[styles.header, isTrueDesktop && styles.headerDesktop]}>
+          {navigation.canGoBack() ? (
+            <View style={styles.headerRow}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                <Icon name="chevron-back" size={20} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+              <View>
+                <Text style={[styles.headerTitle, isTrueDesktop && styles.headerTitleDesktop]}>Mua thuốc</Text>
+                <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.headerTitle, isTrueDesktop && styles.headerTitleDesktop]}>Mua thuốc</Text>
+              <Text style={styles.headerSub}>Sản phẩm cho thú cưng của bạn</Text>
+            </>
+          )}
+        </View>
+
+        {/* Search + Cart — full width, prominent on all sizes */}
+        <View style={[styles.toolbar, isTrueDesktop && styles.toolbarDesktop]}>
+          <View style={styles.searchBar}>
+            <Icon name="search" size={16} color={theme.colors.textTertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm thuốc theo tên hoặc triệu chứng..."
+              placeholderTextColor={theme.colors.textTertiary}
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.cartBtn}
+            onPress={() => navigation.navigate('Cart')}
+          >
+            <Icon name="cart" size={20} color={theme.colors.textPrimary} />
+            {totalItems > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{totalItems}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Mobile/Tablet: categories as horizontal scroll above products */}
+        {!isTrueDesktop && renderCategoryChips()}
+
+        {/* Body: sidebar (desktop) | product grid */}
+        <View style={[styles.body, isTrueDesktop && styles.bodyDesktop]}>
+          {isTrueDesktop && renderCategorySidebar()}
+
+          <View style={styles.productListWrapper}>
+            {/* FlatList key forces remount when numColumns changes */}
+            <FlatList
+              key={`grid-${numColumns}`}
+              data={filteredProducts}
+              renderItem={renderProduct}
+              keyExtractor={(item) => item.id}
+              numColumns={numColumns}
+              columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+              contentContainerStyle={[
+                styles.productList,
+                isTrueDesktop && styles.productListDesktop,
+              ]}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+
       </View>
 
       {/* Floating Cart */}
       {totalItems > 0 && (
         <TouchableOpacity
-          style={styles.floatingCart}
+          style={[styles.floatingCart, isTrueDesktop && styles.floatingCartDesktop]}
           onPress={() => navigation.navigate('Cart')}
           activeOpacity={0.9}
         >
@@ -274,9 +330,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  // Centered max-width page wrapper
+  pageWrapper: {
+    flex: 1,
+    maxWidth: 1280,
+    width: '100%',
+    alignSelf: 'center',
+  },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  headerDesktop: {
+    paddingHorizontal: 32,
+    paddingVertical: 20,
   },
   headerRow: {
     flexDirection: 'row',
@@ -297,6 +364,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
   },
+  headerTitleDesktop: {
+    fontSize: 30,
+  },
   headerSub: {
     fontSize: 14,
     color: theme.colors.textSecondary,
@@ -307,6 +377,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     marginBottom: 12,
+  },
+  toolbarDesktop: {
+    paddingHorizontal: 32,
+    marginBottom: 20,
   },
   searchBar: {
     flex: 1,
@@ -353,6 +427,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
+  // Mobile category chips
   catContainer: {
     height: 48,
     marginBottom: 8,
@@ -393,13 +468,56 @@ const styles = StyleSheet.create({
     color: theme.colors.textOnPrimary,
     fontWeight: '600',
   },
-  resultText: {
-    fontSize: 12,
+  // Body layout
+  body: {
+    flex: 1,
+  },
+  bodyDesktop: {
+    flexDirection: 'row',
+    paddingHorizontal: 32,
+    gap: 24,
+  },
+  // Desktop sidebar
+  sidebar: {
+    width: 200,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: 16,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadow.sm,
+  },
+  sidebarTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 12,
+  },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: theme.radius.md,
+    marginBottom: 2,
+  },
+  sidebarItemActive: {
+    backgroundColor: theme.colors.primaryBg,
+  },
+  sidebarItemText: {
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
     fontWeight: '500',
   },
+  sidebarItemTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  // Product list
   productListWrapper: {
     flex: 1,
   },
@@ -407,10 +525,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 100,
   },
+  productListDesktop: {
+    paddingHorizontal: 0,
+    paddingBottom: 120,
+  },
   row: {
     gap: 12,
     marginBottom: 12,
   },
+  // Product card
   productCard: {
     flex: 1,
     backgroundColor: theme.colors.surface,
@@ -418,16 +541,27 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...theme.shadow.sm,
   },
+  productCardDesktop: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   productImage: {
     height: 120,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
+  productImageDesktop: {
+    height: 180,
+  },
   productImageThumb: {
     width: 100,
     height: 100,
     borderRadius: 8,
+  },
+  productImageThumbDesktop: {
+    width: 140,
+    height: 140,
   },
   discountBadge: {
     position: 'absolute',
@@ -488,12 +622,20 @@ const styles = StyleSheet.create({
   productContent: {
     padding: 12,
   },
+  productContentDesktop: {
+    padding: 16,
+  },
   productName: {
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     minHeight: 36,
     lineHeight: 18,
+  },
+  productNameDesktop: {
+    fontSize: 15,
+    minHeight: 42,
+    lineHeight: 21,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -521,6 +663,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.primary,
   },
+  priceDesktop: {
+    fontSize: 18,
+  },
   oldPrice: {
     fontSize: 11,
     color: theme.colors.textTertiary,
@@ -536,10 +681,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 6,
   },
+  addButtonDesktop: {
+    paddingVertical: 10,
+  },
   addButtonText: {
     color: theme.colors.textOnPrimary,
     fontSize: 13,
     fontWeight: '600',
+  },
+  addButtonTextDesktop: {
+    fontSize: 14,
   },
   qtyControl: {
     flexDirection: 'row',
@@ -584,6 +735,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     ...theme.shadow.lg,
+  },
+  floatingCartDesktop: {
+    paddingHorizontal: 32,
+    maxWidth: 1280,
+    alignSelf: 'center',
+    width: '100%',
   },
   floatingCartLeft: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
@@ -35,10 +35,40 @@ const generateDates = () => {
 
 const DATES = generateDates();
 
+function buildSlotStart(dateStr: string, slotTime: string) {
+  const date = new Date(dateStr);
+  const [startTime] = slotTime.split(' - ');
+  const [hours, minutes] = startTime.split(':').map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+function isPastSlot(dateStr: string, slotTime: string, now = new Date()) {
+  return buildSlotStart(dateStr, slotTime).getTime() <= now.getTime();
+}
+
 export default function SelectTimeSlotScreen({ route, navigation }: any) {
   const { branchId, doctorId, petId, petName } = route.params;
   const [selectedDate, setSelectedDate] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  const selectedDateItem = DATES[selectedDate];
+  const selectedSlotIsPast = useMemo(
+    () => selectedSlot ? isPastSlot(selectedDateItem.dateStr, selectedSlot, now) : false,
+    [now, selectedDateItem.dateStr, selectedSlot]
+  );
+
+  useEffect(() => {
+    if (selectedSlotIsPast) {
+      setSelectedSlot(null);
+    }
+  }, [selectedSlotIsPast]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -67,7 +97,10 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
                     styles.dateButton,
                     selectedDate === index && styles.dateButtonSelected,
                   ]}
-                  onPress={() => setSelectedDate(index)}
+                  onPress={() => {
+                    setSelectedDate(index);
+                    setSelectedSlot(null);
+                  }}
                 >
                   <Text style={[styles.dateText, selectedDate === index && styles.dateTextSelected]}>
                     {dateItem.label}
@@ -84,43 +117,50 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
         <View style={styles.timeSection}>
           <Text style={styles.sectionTitle}>Chọn khung giờ</Text>
           <View style={styles.slotsGrid}>
-            {SLOTS.map((slot) => (
-              <TouchableOpacity
-                key={slot.time}
-                style={[
-                  styles.slotCard,
-                  selectedSlot === slot.time && styles.slotCardSelected,
-                  slot.available === 0 && styles.slotCardFull,
-                ]}
-                onPress={() => {
-                  if (slot.available > 0) {
-                    setSelectedSlot(slot.time);
-                  }
-                }}
-                disabled={slot.available === 0}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.slotTime,
-                  selectedSlot === slot.time && styles.slotTextSelected,
-                  slot.available === 0 && styles.slotTextFull,
-                ]}>
-                  {slot.time}
-                </Text>
-                <View style={[
-                  styles.slotBadge,
-                  slot.available === 0 ? styles.slotBadgeFull : styles.slotBadgeAvailable,
-                  selectedSlot === slot.time && styles.slotBadgeSelected,
-                ]}>
+            {SLOTS.map((slot) => {
+              const slotPassed = isPastSlot(selectedDateItem.dateStr, slot.time, now);
+              const disabled = slot.available === 0 || slotPassed;
+              const selected = selectedSlot === slot.time;
+
+              return (
+                <TouchableOpacity
+                  key={slot.time}
+                  style={[
+                    styles.slotCard,
+                    selected && styles.slotCardSelected,
+                    disabled && styles.slotCardDisabled,
+                  ]}
+                  onPress={() => {
+                    if (!disabled) {
+                      setSelectedSlot(slot.time);
+                    }
+                  }}
+                  disabled={disabled}
+                  activeOpacity={0.8}
+                >
                   <Text style={[
-                    styles.slotBadgeText,
-                    selectedSlot === slot.time && { color: theme.colors.textOnPrimary },
+                    styles.slotTime,
+                    selected && styles.slotTextSelected,
+                    disabled && styles.slotTextDisabled,
                   ]}>
-                    {slot.available === 0 ? 'Đã đầy' : `${slot.available}/${slot.total} chỗ`}
+                    {slot.time}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={[
+                    styles.slotBadge,
+                    disabled ? styles.slotBadgeDisabled : styles.slotBadgeAvailable,
+                    selected && styles.slotBadgeSelected,
+                  ]}>
+                    <Text style={[
+                      styles.slotBadgeText,
+                      selected && { color: theme.colors.textOnPrimary },
+                      disabled && styles.slotBadgeTextDisabled,
+                    ]}>
+                      {slotPassed ? 'Đã qua' : slot.available === 0 ? 'Đã đầy' : `${slot.available}/${slot.total} chỗ`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -131,7 +171,7 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: theme.colors.border }]} />
-            <Text style={styles.legendText}>Đã đầy</Text>
+            <Text style={styles.legendText}>Đã đầy / đã qua</Text>
           </View>
         </View>
       </ScrollView>
@@ -140,20 +180,19 @@ export default function SelectTimeSlotScreen({ route, navigation }: any) {
         <Button
           title="Xác nhận đặt lịch"
           onPress={() => {
-            if (selectedSlot) {
-              const selected = DATES[selectedDate];
+            if (selectedSlot && !isPastSlot(selectedDateItem.dateStr, selectedSlot, new Date())) {
               navigation.navigate('BookingConfirmation', {
                 branchId,
                 doctorId,
-                date: selected.dateStr,
-                dateDisplay: selected.display,
+                date: selectedDateItem.dateStr,
+                dateDisplay: selectedDateItem.display,
                 slot: selectedSlot,
                 petId,
                 petName,
               });
             }
           }}
-          disabled={!selectedSlot}
+          disabled={!selectedSlot || selectedSlotIsPast}
           fullWidth
           size="lg"
         />
@@ -250,7 +289,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryBg,
   },
-  slotCardFull: {
+  slotCardDisabled: {
     backgroundColor: theme.colors.surfaceAlt,
     opacity: 0.6,
   },
@@ -269,7 +308,7 @@ const styles = StyleSheet.create({
   slotBadgeAvailable: {
     backgroundColor: theme.colors.primaryBg,
   },
-  slotBadgeFull: {
+  slotBadgeDisabled: {
     backgroundColor: theme.colors.surfaceAlt,
   },
   slotBadgeSelected: {
@@ -283,7 +322,10 @@ const styles = StyleSheet.create({
   slotTextSelected: {
     color: theme.colors.primaryDarker,
   },
-  slotTextFull: {
+  slotTextDisabled: {
+    color: theme.colors.textTertiary,
+  },
+  slotBadgeTextDisabled: {
     color: theme.colors.textTertiary,
   },
   legend: {

@@ -12,10 +12,12 @@ import ModernCard from '../../components/ModernCard';
 import Button from '../../components/Button';
 import { DOCTORS, DOCTOR_NAMES } from '../../data/doctors';
 import { PRODUCTS, Product } from '../../data/products';
+import { useResponsive, desktopContainer } from '../../utils/responsive';
 
 export default function HomeScreen({ navigation }: any) {
   const { user } = useAuth();
   const { totalItems } = useCart();
+  const { isDesktop } = useResponsive();
   const [pets, setPets] = useState<Pet[]>([]);
   const [selectedPetIndex, setSelectedPetIndex] = useState(0);
   const [showPetDropdown, setShowPetDropdown] = useState(false);
@@ -126,7 +128,7 @@ export default function HomeScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, isDesktop && styles.headerDesktop]}>
           <View style={styles.headerTop}>
             <TouchableOpacity
               style={styles.petSelector}
@@ -208,189 +210,180 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </Modal>
 
-        <ModernCard style={styles.demoJourneyCard} padding="lg">
-          <Text style={styles.demoEyebrow}>Demo flow</Text>
-          <Text style={styles.demoTitle}>Chăm sóc {petName} trong một lượt thử</Text>
-          <Text style={styles.demoText}>
-            Bắt đầu bằng tư vấn nhanh, mua sản phẩm được gợi ý, hoặc đặt lịch khám để thấy dữ liệu demo cập nhật ngay trong app.
-          </Text>
-          <View style={styles.demoSteps}>
-            <TouchableOpacity style={styles.demoStep} onPress={() => startChat()}>
-              <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
-              <Text style={styles.demoStepText}>Tư vấn</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.demoStep} onPress={() => navigation.navigate('Shop')}>
-              <Icon name="cart" size={16} color={theme.colors.secondary} />
-              <Text style={styles.demoStepText}>Mua hàng</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.demoStep} onPress={startBooking}>
-              <Icon name="calendar" size={16} color={theme.colors.info} />
-              <Text style={styles.demoStepText}>Đặt lịch</Text>
-            </TouchableOpacity>
-          </View>
-        </ModernCard>
+        {/* Main content — desktop two-column layout */}
+        <View style={[isDesktop && desktopContainer, isDesktop && styles.desktopContent]}>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.primaryBg }]}
-            onPress={() => startChat()}
-          >
-            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.primary }]}>
-              <Icon name="chat" size={22} color={theme.colors.textOnPrimary} />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.primaryDarker }]}>Tư vấn ngay</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.secondaryBg }]}
-            onPress={startBooking}
-          >
-            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.secondary }]}>
-              <Icon name="calendar" size={22} color={theme.colors.textOnPrimary} />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.secondary }]}>Đặt lịch</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.quickActionCard, { backgroundColor: theme.colors.accentBg }]}
-            onPress={() => navigation.navigate('Shop')}
-          >
-            <View style={[styles.quickIconWrap, { backgroundColor: theme.colors.accent }]}>
-              <Icon name="medkit" size={22} color={theme.colors.textPrimary} />
-            </View>
-            <Text style={[styles.quickActionText, { color: theme.colors.textPrimary }]}>Mua thuốc</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Left column on desktop: hero + quick-actions */}
+          <View style={[isDesktop && styles.desktopLeftCol]}>
+            <ModernCard
+              style={[styles.demoJourneyCard, isDesktop && styles.demoJourneyCardDesktop]}
+              padding="lg"
+            >
+              <Text style={styles.demoEyebrow}>Luồng demo</Text>
+              <Text style={styles.demoTitle}>Chăm sóc {petName} trong một lượt thử</Text>
+              <Text style={styles.demoText}>
+                Bắt đầu bằng tư vấn nhanh, mua sản phẩm được gợi ý, hoặc đặt lịch khám để thấy dữ liệu demo cập nhật ngay trong app.
+              </Text>
+              {/* Quick action buttons: 2x2 grid on desktop, horizontal row on mobile */}
+              <View style={[styles.demoSteps, isDesktop && styles.demoStepsDesktop]}>
+                <TouchableOpacity style={[styles.demoStep, isDesktop && styles.demoStepDesktop]} onPress={() => startChat()}>
+                  <Icon name="chatbubbles" size={16} color={theme.colors.primary} />
+                  <Text style={styles.demoStepText}>Tư vấn</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.demoStep, isDesktop && styles.demoStepDesktop]} onPress={() => navigation.navigate('Shop')}>
+                  <Icon name="cart" size={16} color={theme.colors.secondary} />
+                  <Text style={styles.demoStepText}>Mua hàng</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.demoStep, isDesktop && styles.demoStepDesktop]} onPress={startBooking}>
+                  <Icon name="calendar" size={16} color={theme.colors.info} />
+                  <Text style={styles.demoStepText}>Đặt lịch</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.demoStep, isDesktop && styles.demoStepDesktop]} onPress={() => navigation.navigate('Orders')}>
+                  <Icon name="medkit" size={16} color={theme.colors.success} />
+                  <Text style={styles.demoStepText}>Đơn thuốc</Text>
+                </TouchableOpacity>
+              </View>
+            </ModernCard>
 
-        {/* Appointment Card */}
-        <ModernCard style={styles.appointmentCard} header={
-          <View style={styles.appointmentHeader}>
-            <Text style={styles.appointmentTitle}>Lịch khám sắp tới</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ScheduleTab')}>
-              <Text style={styles.viewDetail}>Xem chi tiết →</Text>
-            </TouchableOpacity>
+            {/* Doctors Online */}
+            <View style={[styles.section, isDesktop && styles.sectionDesktop]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Bác sĩ đang online</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('AllDoctors')}>
+                  <Text style={styles.viewAll}>Xem tất cả →</Text>
+                </TouchableOpacity>
+              </View>
+              <ModernCard>
+                <View style={styles.doctorCard}>
+                  <View style={styles.doctorAvatar}>
+                    <Image source={{ uri: displayDoctor.imageUrl }} style={styles.doctorImage} />
+                  </View>
+                  <View style={styles.doctorInfo}>
+                    <Text style={styles.doctorName}>{displayDoctor.name}</Text>
+                    <Text style={styles.doctorSpecialty}>{displayDoctor.specialty}</Text>
+                  </View>
+                  <Button
+                    title="Chat ngay"
+                    size="sm"
+                    onPress={() => startChat(displayDoctor)}
+                  />
+                </View>
+              </ModernCard>
+            </View>
           </View>
-        }>
-          {upcomingAppointment ? (
-            <View style={styles.appointmentContent}>
-              <View style={styles.appointmentImage}>
-                {(pets.find(p => p.id === upcomingAppointment.petId))?.avatarUrl ? (
-                  <Image source={{ uri: (pets.find(p => p.id === upcomingAppointment.petId))!.avatarUrl! }} style={styles.appointmentPetImage} />
-                ) : (
-                  <Icon name="paw" size={32} color={theme.colors.primary} />
-                )}
-              </View>
-              <View style={styles.appointmentInfo}>
-                <View style={styles.appointmentRow}>
-                  <Text style={styles.appointmentLabel}>Ngày khám</Text>
-                  <Text style={styles.appointmentValue}>
-                    {new Date(upcomingAppointment.dateTime).toLocaleDateString('vi-VN')}
-                  </Text>
-                </View>
-                <View style={styles.appointmentRow}>
-                  <Text style={styles.appointmentLabel}>Khung giờ</Text>
-                  <Text style={styles.appointmentValue}>{upcomingAppointment.slot}</Text>
-                </View>
-                <View style={styles.appointmentRow}>
-                  <Text style={styles.appointmentLabel}>Pet</Text>
-                  <Text style={styles.appointmentValue}>
-                    {pets.find(p => p.id === upcomingAppointment.petId)?.name || petName}
-                  </Text>
-                </View>
-                <View style={styles.appointmentRow}>
-                  <Text style={styles.appointmentLabel}>Bác sĩ</Text>
-                  <Text style={styles.appointmentValue}>
-                    {DOCTOR_NAMES[upcomingAppointment.doctorId] || 'Đang cập nhật'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.appointmentEmpty}>
-              <Icon name="calendar-outline" size={48} color={theme.colors.border} style={{ marginBottom: theme.spacing.sm }} />
-              <Text style={styles.appointmentEmptyText}>Chưa có lịch khám nào</Text>
-              <Button
-                title="Đặt lịch ngay"
-                size="sm"
-                onPress={startBooking}
-                icon="add"
-                style={{ marginTop: theme.spacing.md }}
-              />
-            </View>
-          )}
-        </ModernCard>
 
-        {/* Doctors Online */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Bác sĩ đang online</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AllDoctors')}>
-              <Text style={styles.viewAll}>Xem tất cả →</Text>
-            </TouchableOpacity>
-          </View>
-          <ModernCard>
-            <View style={styles.doctorCard}>
-              <View style={styles.doctorAvatar}>
-                <Image source={{ uri: displayDoctor.imageUrl }} style={styles.doctorImage} />
-              </View>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>{displayDoctor.name}</Text>
-                <Text style={styles.doctorSpecialty}>{displayDoctor.specialty}</Text>
-              </View>
-              <Button
-                title="Chat ngay"
-                size="sm"
-                onPress={() => startChat(displayDoctor)}
-              />
-            </View>
-          </ModernCard>
-        </View>
-
-        {/* Purchased Medicines */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Đơn thuốc đã mua</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-              <Text style={styles.viewAll}>Xem tất cả →</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.medicineScroll}>
-            {purchasedProducts.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-              >
-              <ModernCard style={styles.flashCard} padding="md">
-                <View style={styles.flashImageContainer}>
-                  <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
-                    {item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
-                    ) : item.imageLocal ? (
-                      <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
+          {/* Right column on desktop: pet summary + upcoming appointment */}
+          <View style={[isDesktop && styles.desktopRightCol]}>
+            {/* Appointment Card */}
+            <ModernCard
+              style={[styles.appointmentCard, isDesktop && styles.appointmentCardDesktop]}
+              header={
+                <View style={styles.appointmentHeader}>
+                  <Text style={styles.appointmentTitle}>Lịch khám sắp tới</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('ScheduleTab')}>
+                    <Text style={styles.viewDetail}>Xem chi tiết →</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            >
+              {upcomingAppointment ? (
+                <View style={styles.appointmentContent}>
+                  <View style={styles.appointmentImage}>
+                    {(pets.find(p => p.id === upcomingAppointment.petId))?.avatarUrl ? (
+                      <Image source={{ uri: (pets.find(p => p.id === upcomingAppointment.petId))!.avatarUrl! }} style={styles.appointmentPetImage} />
                     ) : (
-                      <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                      <Icon name="paw" size={32} color={theme.colors.primary} />
                     )}
                   </View>
+                  <View style={styles.appointmentInfo}>
+                    <View style={styles.appointmentRow}>
+                      <Text style={styles.appointmentLabel}>Ngày khám</Text>
+                      <Text style={styles.appointmentValue}>
+                        {new Date(upcomingAppointment.dateTime).toLocaleDateString('vi-VN')}
+                      </Text>
+                    </View>
+                    <View style={styles.appointmentRow}>
+                      <Text style={styles.appointmentLabel}>Khung giờ</Text>
+                      <Text style={styles.appointmentValue}>{upcomingAppointment.slot}</Text>
+                    </View>
+                    <View style={styles.appointmentRow}>
+                      <Text style={styles.appointmentLabel}>Pet</Text>
+                      <Text style={styles.appointmentValue}>
+                        {pets.find(p => p.id === upcomingAppointment.petId)?.name || petName}
+                      </Text>
+                    </View>
+                    <View style={styles.appointmentRow}>
+                      <Text style={styles.appointmentLabel}>Bác sĩ</Text>
+                      <Text style={styles.appointmentValue}>
+                        {DOCTOR_NAMES[upcomingAppointment.doctorId] || 'Đang cập nhật'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-                <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
-                {item.originalPrice && (
-                  <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
-                )}
-                <Button
-                  title="Mua lại"
-                  size="sm"
-                  variant="secondary"
-                  onPress={() => navigation.navigate('Shop')}
-                />
-              </ModernCard>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+              ) : (
+                <View style={styles.appointmentEmpty}>
+                  <Icon name="calendar-outline" size={48} color={theme.colors.border} style={{ marginBottom: theme.spacing.sm }} />
+                  <Text style={styles.appointmentEmptyText}>Chưa có lịch khám nào</Text>
+                  <Button
+                    title="Đặt lịch ngay"
+                    size="sm"
+                    onPress={startBooking}
+                    icon="add"
+                    style={{ marginTop: theme.spacing.md }}
+                  />
+                </View>
+              )}
+            </ModernCard>
 
-        {/* Flash Sale */}
-        <View style={styles.section}>
+            {/* Purchased Medicines */}
+            <View style={[styles.section, isDesktop && styles.sectionDesktop]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Đơn thuốc đã mua</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+                  <Text style={styles.viewAll}>Xem tất cả →</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.medicineScroll}>
+                {purchasedProducts.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+                  >
+                    <ModernCard style={styles.flashCard} padding="md">
+                      <View style={styles.flashImageContainer}>
+                        <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
+                          {item.imageUrl ? (
+                            <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
+                          ) : item.imageLocal ? (
+                            <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
+                          ) : (
+                            <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                          )}
+                        </View>
+                      </View>
+                      <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
+                      <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                      {item.originalPrice && (
+                        <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
+                      )}
+                      <Button
+                        title="Mua lại"
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => navigation.navigate('Shop')}
+                      />
+                    </ModernCard>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+
+        </View>{/* end desktop two-column wrapper */}
+
+        {/* Flash Sale — full width below columns */}
+        <View style={[styles.section, isDesktop && styles.sectionDesktop]}>
           <View style={styles.flashHeader}>
             <View style={styles.flashTitleWrap}>
               <Icon name="flash" size={16} color={theme.colors.danger} />
@@ -405,35 +398,35 @@ export default function HomeScreen({ navigation }: any) {
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
               >
-              <ModernCard style={styles.flashCard} padding="md">
-                <View style={styles.flashImageContainer}>
-                  <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
-                    {item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
-                    ) : item.imageLocal ? (
-                      <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
-                    ) : (
-                      <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                <ModernCard style={styles.flashCard} padding="md">
+                  <View style={styles.flashImageContainer}>
+                    <View style={[styles.flashImage, { backgroundColor: item.bgColor }]}>
+                      {item.imageUrl ? (
+                        <Image source={{ uri: item.imageUrl }} style={styles.flashImageInner} resizeMode="contain" />
+                      ) : item.imageLocal ? (
+                        <Image source={item.imageLocal} style={styles.flashImageInner} resizeMode="contain" />
+                      ) : (
+                        <Icon name="medkit" size={36} color={theme.colors.primaryLight} />
+                      )}
+                    </View>
+                    {(item.isHot || item.isNew) && (
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>{item.isHot ? 'HOT' : 'MỚI'}</Text>
+                      </View>
                     )}
                   </View>
-                  {(item.isHot || item.isNew) && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>{item.isHot ? 'HOT' : 'MỚI'}</Text>
-                    </View>
+                  <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
+                  <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                  {item.originalPrice && (
+                    <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
                   )}
-                </View>
-                <Text style={styles.flashName} numberOfLines={2}>{item.name}</Text>
-                <Text style={styles.flashPrice}>{item.price.toLocaleString('vi-VN')}đ</Text>
-                {item.originalPrice && (
-                  <Text style={styles.flashOldPrice}>{item.originalPrice.toLocaleString('vi-VN')}đ</Text>
-                )}
-                <Button
-                  title="Mua ngay"
-                  size="sm"
-                  variant="secondary"
-                  onPress={() => navigation.navigate('Shop')}
-                />
-              </ModernCard>
+                  <Button
+                    title="Mua ngay"
+                    size="sm"
+                    variant="secondary"
+                    onPress={() => navigation.navigate('Shop')}
+                  />
+                </ModernCard>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -457,6 +450,42 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.lg,
     borderBottomLeftRadius: theme.radius.xxl,
     borderBottomRightRadius: theme.radius.xxl,
+  },
+  // Desktop layout
+  headerDesktop: {
+    paddingHorizontal: 48,
+  },
+  desktopContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 48,
+    paddingTop: theme.spacing.lg,
+    gap: 24,
+  },
+  desktopLeftCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  desktopRightCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  demoJourneyCardDesktop: {
+    marginHorizontal: 0,
+    marginTop: 0,
+  },
+  demoStepsDesktop: {
+    flexWrap: 'wrap',
+  },
+  demoStepDesktop: {
+    flexBasis: '47%',
+    flex: 0,
+  },
+  appointmentCardDesktop: {
+    marginHorizontal: 0,
+  },
+  sectionDesktop: {
+    paddingHorizontal: 0,
   },
   headerTop: {
     flexDirection: 'row',
@@ -612,31 +641,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  quickActionCard: {
-    flex: 1,
-    padding: theme.spacing.md,
-    borderRadius: theme.radius.xl,
-    alignItems: 'center',
-    gap: 8,
-    ...theme.shadow.sm,
-  },
-  quickIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickActionText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   appointmentCard: {
     marginHorizontal: theme.spacing.lg,

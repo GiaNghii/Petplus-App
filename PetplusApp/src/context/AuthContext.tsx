@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockAuthService } from '../services/authService';
 import { User } from '../types';
 import { DEMO_USER } from '../data/demoData';
+import { initializeDemoData } from '../services/mockDataService';
 
 interface AuthContextType {
   user: User | null;
@@ -25,7 +26,36 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(DEMO_USER);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const bootstrap = async () => {
+      try {
+        await initializeDemoData();
+        const currentUser = await mockAuthService.getCurrentUser();
+        if (mounted) {
+          setUser(currentUser || DEMO_USER);
+        }
+      } catch (e) {
+        console.error('Bootstrap demo data error:', e);
+        if (mounted) {
+          setUser(DEMO_USER);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     const result = await mockAuthService.login(email, password);

@@ -6,6 +6,7 @@ import { DEMO_APPOINTMENTS, DEMO_ORDERS, DEMO_PETS, DEMO_USER } from '../data/de
 // Perfect for demo without billing
 
 const STORAGE_KEYS = {
+  SEED_VERSION: 'mock_seed_version',
   PETS: 'mock_pets',
   ORDERS: 'mock_orders',
   APPOINTMENTS: 'mock_appointments_v2',
@@ -17,9 +18,50 @@ const STORAGE_KEYS = {
 const SEED_PETS = DEMO_PETS;
 const SEED_APPOINTMENTS = DEMO_APPOINTMENTS;
 const SEED_ORDERS = DEMO_ORDERS;
+const CURRENT_SEED_VERSION = '2026-06-13-xe-dap-local-v1';
+
+async function ensureStorageKey<T>(key: string, seed: T[]): Promise<void> {
+  const existing = await AsyncStorage.getItem(key);
+  if (!existing) {
+    await AsyncStorage.setItem(key, JSON.stringify(seed));
+  }
+}
+
+function migrateSeedPets(pets: Pet[]): Pet[] {
+  return pets.map(pet => {
+    if (pet.id === 'pet_1' && pet.name === 'Chí A') {
+      return { ...pet, name: SEED_PETS[0].name };
+    }
+    return pet;
+  });
+}
+
+export async function initializeDemoData() {
+  try {
+    await Promise.all([
+      ensureStorageKey(STORAGE_KEYS.PETS, SEED_PETS),
+      ensureStorageKey(STORAGE_KEYS.ORDERS, SEED_ORDERS),
+      ensureStorageKey(STORAGE_KEYS.APPOINTMENTS, SEED_APPOINTMENTS),
+      ensureStorageKey(STORAGE_KEYS.CONSULTATIONS, []),
+      ensureStorageKey(STORAGE_KEYS.MESSAGES, []),
+    ]);
+
+    const seedVersion = await AsyncStorage.getItem(STORAGE_KEYS.SEED_VERSION);
+    if (seedVersion !== CURRENT_SEED_VERSION) {
+      const petsJson = await AsyncStorage.getItem(STORAGE_KEYS.PETS);
+      if (petsJson) {
+        await AsyncStorage.setItem(STORAGE_KEYS.PETS, JSON.stringify(migrateSeedPets(JSON.parse(petsJson))));
+      }
+      await AsyncStorage.setItem(STORAGE_KEYS.SEED_VERSION, CURRENT_SEED_VERSION);
+    }
+  } catch (e) {
+    console.error('Initialize demo data error:', e);
+  }
+}
 
 export async function resetDemoData() {
   await AsyncStorage.multiSet([
+    [STORAGE_KEYS.SEED_VERSION, CURRENT_SEED_VERSION],
     [STORAGE_KEYS.PETS, JSON.stringify(SEED_PETS)],
     [STORAGE_KEYS.ORDERS, JSON.stringify(SEED_ORDERS)],
     [STORAGE_KEYS.APPOINTMENTS, JSON.stringify(SEED_APPOINTMENTS)],
@@ -313,6 +355,14 @@ export const mockMessageService = {
         .filter(m => m.consultationId === consultationId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     };
+  },
+
+  async clearMessagesByConsultation(consultationId: string) {
+    const messages = (await getData<Message>(STORAGE_KEYS.MESSAGES, [])).map(hydrateMessage);
+    const remainingMessages = messages.filter(m => m.consultationId !== consultationId);
+    await saveData(STORAGE_KEYS.MESSAGES, remainingMessages);
+    await mockConsultationService.touchConsultation(consultationId);
+    return { success: true };
   },
 
   async createMessage(data: {
