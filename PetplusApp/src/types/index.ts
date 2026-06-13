@@ -72,9 +72,20 @@ export interface Consultation {
   customerId: string;
   doctorId: string;
   petId: string;
+  petName?: string;
+  customerName?: string;
+  doctorName?: string;
   status: 'waiting' | 'active' | 'closed';
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface MessageProductLink {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  conditionId?: string;
 }
 
 export interface Message {
@@ -83,9 +94,10 @@ export interface Message {
   senderId: string;
   senderRole: 'customer' | 'doctor';
   text: string;
-  productLink?: string;
+  productLink?: MessageProductLink;
   imageUrl?: string;
   createdAt: Date;
+  source?: 'user' | 'doctor' | 'ai' | 'fallback' | 'safety';
 }
 
 export interface Product {

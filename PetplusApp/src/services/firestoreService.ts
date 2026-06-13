@@ -1,12 +1,20 @@
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-import { mockPetService, mockAppointmentService, mockOrderService } from './mockDataService';
+import {
+  mockPetService,
+  mockAppointmentService,
+  mockOrderService,
+  mockConsultationService,
+  mockMessageService,
+} from './mockDataService';
 import { PRODUCTS } from '../data/products';
 import type { Product } from '../data/products';
 
 export const petService = mockPetService;
 export const appointmentService = mockAppointmentService;
 export const orderService = mockOrderService;
+export const consultationService = mockConsultationService;
+export const messageService = mockMessageService;
 
 export const productService = {
   async getProducts(): Promise<{ success: boolean; products: Product[] }> {

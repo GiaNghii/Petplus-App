@@ -1,34 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Icon from '../../components/Icon';
 import QuickChatPanel from '../../components/QuickChatPanel';
-import { petService, orderService, productService } from '../../services/firestoreService';
+import { consultationService, messageService, orderService, petService, productService } from '../../services/firestoreService';
+import { generateConsultationReply } from '../../services/aiChatService';
 import { useAuth } from '../../context/AuthContext';
-import { Pet, Order } from '../../types';
-import { QuickTreatment, TREATMENTS, buildQuickChatMessage, checkTreatmentPrescribed, CONDITIONS } from '../../data/quickChatData';
-
-interface Message {
-  id: string;
-  text: string;
-  sender: 'customer' | 'doctor';
-  timestamp: Date;
-  productLink?: { id: string; name: string; price: number; description: string; conditionId: string };
-}
-
-const AUTO_REPLIES = [
-  'Dạ em hiểu rồi ạ. Anh/chị có thể mô tả thêm triệu chứng không?',
-  'Em sẽ kiểm tra lại hồ sơ của pet. Anh/chị vui lòng chờ nhé.',
-  'Theo em thấy thì tình trạng này khá phổ biến. Em sẽ kê đơn thuốc phù hợp.',
-  'Anh/chị nhớ cho pet uống thuốc đúng giờ nhé. Nếu có gì bất thường thì nhắn em ngay.',
-  'Em đã ghi nhận thông tin. Anh/chị yên tâm, tình trạng này sẽ cải thiện sau vài ngày.',
-  'Anh/chị có thể gửi thêm hình ảnh vùng bị ảnh hưởng để em chẩn đoán chính xác hơn không?',
-  'Dạ vâng, em hiểu. Em sẽ tư vấn anh/chị phương án điều trị tốt nhất.',
-  'Anh/chị nhớ theo dõi tình trạng của pet trong 2-3 ngày tới nhé.',
-  'Nếu pet có biểu hiện bất thường, anh/chị đưa đến phòng khám ngay nhé.',
-];
+import { Message, Order, Pet } from '../../types';
+import { TREATMENTS, buildQuickChatMessage, checkTreatmentPrescribed, CONDITIONS } from '../../data/quickChatData';
 
 const CONDITION_INTROS: Record<string, string> = {
   condition_ear_mites: 'Dạ anh/chị, với tình trạng rận tai bên em có các sản phẩm sau. Anh/chị xem và chọn sản phẩm phù hợp nhé:',
@@ -37,29 +18,168 @@ const CONDITION_INTROS: Record<string, string> = {
   condition_matted_fur: 'Dạ anh/chị, với tình trạng bết lông bên em có các sản phẩm chăm sóc sau. Anh/chị tham khảo nhé:',
 };
 
-let replyIndex = 0;
+// ─── List item types ──────────────────────────────────────────────────────────
+
+type DateSeparatorItem = { type: 'dateSeparator'; id: string; label: string };
+type ListItem = Message | DateSeparatorItem;
+
+function isMsgItem(item: ListItem): item is Message {
+  return !('type' in item && (item as DateSeparatorItem).type === 'dateSeparator');
+}
+
+function insertDateSeparators(messages: Message[]): ListItem[] {
+  if (!messages.length) return [];
+  const result: ListItem[] = [];
+  let lastKey = '';
+  const toKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const todayKey = toKey(new Date());
+  const yesterdayKey = toKey(new Date(Date.now() - 86400000));
+  for (const msg of messages) {
+    const d = new Date(msg.createdAt);
+    const key = toKey(d);
+    if (key !== lastKey) {
+      let label = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      if (key === todayKey) label = 'Hôm nay';
+      else if (key === yesterdayKey) label = 'Hôm qua';
+      result.push({ type: 'dateSeparator', id: `sep_${key}`, label });
+      lastKey = key;
+    }
+    result.push(msg);
+  }
+  return result;
+}
+
+function isLastInGroup(items: ListItem[], index: number): boolean {
+  const cur = items[index];
+  if (!isMsgItem(cur)) return false;
+  const next = items[index + 1];
+  if (!next || !isMsgItem(next)) return true;
+  return next.senderRole !== cur.senderRole;
+}
+
+// ─── Animated typing indicator ────────────────────────────────────────────────
+
+function TypingIndicator() {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Each dot bounces in a 900ms cycle, staggered by 150ms
+    const bounce = (dot: Animated.Value, startDelay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(startDelay),
+          Animated.timing(dot, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.delay(Math.max(0, 900 - startDelay - 500)),
+        ])
+      );
+    const a1 = bounce(dot1, 0);
+    const a2 = bounce(dot2, 150);
+    const a3 = bounce(dot3, 300);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+
+  return (
+    <View style={tStyles.row}>
+      <View style={tStyles.bubble}>
+        {([dot1, dot2, dot3] as Animated.Value[]).map((dot, i) => (
+          <Animated.View
+            key={i}
+            style={[tStyles.dot, {
+              transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }],
+            }]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const tStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+  },
+  bubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 10,
+    borderRadius: theme.radius.lg,
+    borderBottomLeftRadius: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.textSecondary,
+  },
+});
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function ChatScreen({ route, navigation }: any) {
   const { doctorId, doctorName, petName, petId } = route.params;
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: `Dạ chào anh/chị, em là bác sĩ ${doctorName}. Anh/chị cần tư vấn về ${petName} ạ?`,
-      sender: 'doctor',
-      timestamp: new Date(),
-    },
-  ]);
+  const [consultationId, setConsultationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const [pet, setPet] = useState<Pet | null>(null);
   const [prescribedMedNames, setPrescribedMedNames] = useState<string[]>([]);
   const [showQuickChat, setShowQuickChat] = useState(true);
 
+  const listItems = useMemo(() => insertDateSeparators(messages), [messages]);
+
   useEffect(() => {
-    loadPetAndPrescriptions();
+    initializeConsultation();
+    return () => { timeoutRefs.current.forEach(clearTimeout); };
   }, []);
+
+  const appendMessage = (message: Message) => {
+    setMessages(prev => [...prev, message]);
+  };
+
+  const initializeConsultation = async () => {
+    const customerId = user?.id || 'demo_user';
+    const currentPetId = petId || 'demo_pet';
+    const result = await consultationService.getOrCreateConsultation({
+      customerId,
+      doctorId,
+      petId: currentPetId,
+      petName,
+      customerName: user?.name || 'Khách hàng',
+      doctorName,
+    });
+
+    if (!result.success || !result.consultation) return;
+
+    setConsultationId(result.consultation.id);
+    await messageService.ensureWelcomeMessage({
+      consultationId: result.consultation.id,
+      doctorId,
+      doctorName,
+      petName,
+    });
+
+    const messageResult = await messageService.getMessagesByConsultation(result.consultation.id);
+    if (messageResult.success && messageResult.messages) {
+      setMessages(messageResult.messages);
+      setShowQuickChat(messageResult.messages.length <= 1);
+    }
+
+    await loadPetAndPrescriptions();
+  };
 
   const loadPetAndPrescriptions = async () => {
     if (petId && user?.id) {
@@ -83,9 +203,7 @@ export default function ChatScreen({ route, navigation }: any) {
           order.items.forEach((item) => {
             if (item.type === 'prescription' && item.petId === petId) {
               const productName = productMap.get(item.productId);
-              if (productName) {
-                medNames.push(productName);
-              }
+              if (productName) medNames.push(productName);
             }
           });
         });
@@ -94,42 +212,57 @@ export default function ChatScreen({ route, navigation }: any) {
     }
   };
 
-  const handleSelectCondition = (conditionId: string) => {
+  const createAndAppendMessage = async (data: Parameters<typeof messageService.createMessage>[0]) => {
+    const result = await messageService.createMessage(data);
+    if (result.success && result.message) {
+      appendMessage(result.message);
+      return result.message;
+    }
+    return null;
+  };
+
+  const scheduleMessage = (callback: () => void, delay: number) => {
+    const timeoutId = setTimeout(callback, delay);
+    timeoutRefs.current.push(timeoutId);
+  };
+
+  const handleSelectCondition = async (conditionId: string) => {
+    if (!consultationId) return;
+
     const condition = CONDITIONS.find(c => c.id === conditionId);
     if (!condition) return;
 
-    const customerMsg: Message = {
-      id: Date.now().toString(),
+    await createAndAppendMessage({
+      consultationId,
+      senderId: user?.id || 'demo_user',
+      senderRole: 'customer',
       text: buildQuickChatMessage(petName, condition.name),
-      sender: 'customer',
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, customerMsg]);
+      source: 'user',
+    });
     setShowQuickChat(false);
 
     const treatments = TREATMENTS[conditionId] || [];
     const introText = CONDITION_INTROS[conditionId] || 'Dạ anh/chị, bên em có các sản phẩm sau phù hợp với tình trạng này:';
 
-    setTimeout(() => {
-      const introMsg: Message = {
-        id: (Date.now() + 1).toString(),
+    scheduleMessage(() => {
+      createAndAppendMessage({
+        consultationId,
+        senderId: doctorId,
+        senderRole: 'doctor',
         text: introText,
-        sender: 'doctor',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, introMsg]);
-    }, 1500);
+        source: 'doctor',
+      });
+    }, 1000);
 
     treatments.forEach((treatment, index) => {
-      setTimeout(() => {
-        const prefix = checkTreatmentPrescribed(treatment, prescribedMedNames)
-          ? ' (Đã từng kê đơn)'
-          : '';
-        const productMsg: Message = {
-          id: `prod_${Date.now()}_${index}`,
-          text: `${treatment.description}`,
-          sender: 'doctor',
-          timestamp: new Date(),
+      scheduleMessage(() => {
+        const prefix = checkTreatmentPrescribed(treatment, prescribedMedNames) ? ' (Đã từng kê đơn)' : '';
+        createAndAppendMessage({
+          consultationId,
+          senderId: doctorId,
+          senderRole: 'doctor',
+          text: treatment.description,
+          source: 'doctor',
           productLink: {
             id: treatment.id,
             name: `${treatment.name}${prefix}`,
@@ -137,44 +270,46 @@ export default function ChatScreen({ route, navigation }: any) {
             description: treatment.description,
             conditionId,
           },
-        };
-        setMessages(prev => [...prev, productMsg]);
-      }, 3000 + index * 1200);
+        });
+      }, 2200 + index * 1000);
     });
   };
 
-  const sendMessage = () => {
-    if (!inputText.trim()) return;
+  const sendMessage = async () => {
+    const text = inputText.trim();
+    if (!text || !consultationId || replyLoading) return;
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText,
-      sender: 'customer',
-      timestamp: new Date(),
-    };
+    const customerMessage = await createAndAppendMessage({
+      consultationId,
+      senderId: user?.id || 'demo_user',
+      senderRole: 'customer',
+      text,
+      source: 'user',
+    });
 
-    setMessages(prev => [...prev, newMessage]);
     setInputText('');
+    setShowQuickChat(false);
+    setReplyLoading(true);
 
-    const replyText = AUTO_REPLIES[replyIndex % AUTO_REPLIES.length];
-    replyIndex += 1;
+    const reply = await generateConsultationReply({
+      text,
+      petName,
+      doctorName,
+      pet,
+      recentMessages: customerMessage ? [...messages, customerMessage] : messages,
+    });
 
-    setTimeout(() => {
-      const autoReply: Message = {
-        id: (Date.now() + 1).toString(),
-        text: replyText,
-        sender: 'doctor',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, autoReply]);
-    }, 1500);
-
-    if (showQuickChat) {
-      setShowQuickChat(false);
-    }
+    await createAndAppendMessage({
+      consultationId,
+      senderId: doctorId,
+      senderRole: 'doctor',
+      text: reply.text,
+      source: reply.source,
+    });
+    setReplyLoading(false);
   };
 
-const handleProductTap = (productLink: Message['productLink']) => {
+  const handleProductTap = (productLink: Message['productLink']) => {
     if (!productLink) return;
     navigation.navigate('ProductDetail', {
       productId: productLink.id,
@@ -189,51 +324,83 @@ const handleProductTap = (productLink: Message['productLink']) => {
     });
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View style={[
-      styles.messageContainer,
-      item.sender === 'customer' ? styles.customerMessage : styles.doctorMessage
-    ]}>
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isNearBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 80;
+    setShowScrollToBottom(!isNearBottom && contentSize.height > layoutMeasurement.height + 50);
+  };
+
+  const getSourceLabel = (item: Message) => {
+    if (item.source === 'ai') return 'Phản hồi AI từ bác sĩ';
+    if (item.source === 'fallback') return 'Phản hồi tự động';
+    if (item.source === 'safety') return 'Cảnh báo an toàn';
+    return '';
+  };
+
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
+    // Date separator
+    if (!isMsgItem(item)) {
+      return (
+        <View style={styles.dateSeparator}>
+          <View style={styles.dateSeparatorLine} />
+          <Text style={styles.dateSeparatorText}>{item.label}</Text>
+          <View style={styles.dateSeparatorLine} />
+        </View>
+      );
+    }
+
+    const isCustomer = item.senderRole === 'customer';
+    const lastInGroup = isLastInGroup(listItems, index);
+    const sourceLabel = getSourceLabel(item);
+
+    return (
       <View style={[
-        styles.messageBubble,
-        item.sender === 'customer' ? styles.customerBubble : styles.doctorBubble
+        styles.messageContainer,
+        isCustomer ? styles.customerMessage : styles.doctorMessage,
+        !lastInGroup && styles.messageCompact,
       ]}>
-        <Text style={[
-          styles.messageText,
-          item.sender === 'customer' ? styles.customerText : styles.doctorText
+        <View style={[
+          styles.messageBubble,
+          isCustomer ? styles.customerBubble : styles.doctorBubble,
+          lastInGroup && (isCustomer ? styles.customerBubbleTail : styles.doctorBubbleTail),
+          item.source === 'safety' && styles.safetyBubble,
         ]}>
-          {item.text}
-        </Text>
-        {item.productLink && (
-          <TouchableOpacity
-            style={styles.productCard}
-            onPress={() => handleProductTap(item.productLink)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.productIconWrap}>
-              <Icon name="medkit" size={22} color={theme.colors.primary} />
-            </View>
-            <View style={styles.productInfo}>
-              <Text style={styles.recommendationLabel}>Gợi ý điều trị</Text>
-              <Text style={styles.productName}>{item.productLink.name}</Text>
-              <Text style={styles.productPrice}>
-                {item.productLink.price.toLocaleString('vi-VN')}đ
-              </Text>
-            </View>
-            <View style={styles.buyChip}>
-              <Text style={styles.buyChipText}>Mua</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        <Text style={[
-          styles.timestamp,
-          item.sender === 'customer' ? styles.customerTimestamp : styles.doctorTimestamp
-        ]}>
-          {item.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+          {sourceLabel ? (
+            <Text style={[styles.sourceLabel, item.source === 'safety' && styles.safetySourceLabel]}>
+              {sourceLabel}
+            </Text>
+          ) : null}
+          <Text style={[styles.messageText, isCustomer ? styles.customerText : styles.doctorText]}>
+            {item.text}
+          </Text>
+          {item.productLink && (
+            <TouchableOpacity
+              style={styles.productCard}
+              onPress={() => handleProductTap(item.productLink)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.productIconWrap}>
+                <Icon name="medkit" size={22} color={theme.colors.primary} />
+              </View>
+              <View style={styles.productInfo}>
+                <Text style={styles.recommendationLabel}>Gợi ý điều trị</Text>
+                <Text style={styles.productName}>{item.productLink.name}</Text>
+                <Text style={styles.productPrice}>
+                  {item.productLink.price.toLocaleString('vi-VN')}đ
+                </Text>
+              </View>
+              <View style={styles.buyChip}>
+                <Text style={styles.buyChipText}>Mua</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          <Text style={[styles.timestamp, isCustomer ? styles.customerTimestamp : styles.doctorTimestamp]}>
+            {item.createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -249,14 +416,46 @@ const handleProductTap = (productLink: Message['productLink']) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          style={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        />
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={flatListRef}
+            data={listItems}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            style={styles.messagesList}
+            contentContainerStyle={[
+              styles.messagesContent,
+              listItems.length === 0 && styles.messagesContentEmpty,
+            ]}
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
+            ListEmptyComponent={
+              consultationId ? (
+                <View style={styles.emptyState}>
+                  <View style={styles.emptyStateIcon}>
+                    <Icon name="chatbubbles" size={40} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.emptyStateTitle}>Bắt đầu cuộc trò chuyện</Text>
+                  <Text style={styles.emptyStateText}>
+                    Chọn một tình trạng bên dưới để nhận tư vấn nhanh từ bác sĩ.
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
+
+          {showScrollToBottom && (
+            <TouchableOpacity
+              style={styles.scrollFab}
+              onPress={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            >
+              <Icon name="arrow-down" size={18} color={theme.colors.textOnPrimary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {replyLoading && <TypingIndicator />}
 
         <QuickChatPanel
           visible={showQuickChat}
@@ -286,9 +485,9 @@ const handleProductTap = (productLink: Message['productLink']) => {
             multiline
           />
           <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!inputText.trim() || replyLoading) && styles.sendButtonDisabled]}
             onPress={sendMessage}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || replyLoading}
           >
             <Icon name="send" size={18} color={theme.colors.textOnPrimary} />
           </TouchableOpacity>
@@ -308,11 +507,22 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
+  },
+  messagesContent: {
     padding: theme.spacing.lg,
   },
+  messagesContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+
+  // ─── Message containers ──────────────────────────────────────────────────
   messageContainer: {
     marginBottom: theme.spacing.md,
     maxWidth: '80%',
+  },
+  messageCompact: {
+    marginBottom: 3,
   },
   customerMessage: {
     alignSelf: 'flex-end',
@@ -320,17 +530,36 @@ const styles = StyleSheet.create({
   doctorMessage: {
     alignSelf: 'flex-start',
   },
+
+  // ─── Bubbles ─────────────────────────────────────────────────────────────
   messageBubble: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.lg,
   },
   customerBubble: {
     backgroundColor: theme.colors.primary,
+  },
+  customerBubbleTail: {
     borderBottomRightRadius: 4,
   },
   doctorBubble: {
     backgroundColor: theme.colors.surfaceAlt,
+  },
+  doctorBubbleTail: {
     borderBottomLeftRadius: 4,
+  },
+  safetyBubble: {
+    backgroundColor: theme.colors.dangerBg,
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+  },
+  sourceLabel: {
+    ...theme.typography.overline,
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  safetySourceLabel: {
+    color: theme.colors.danger,
   },
   messageText: {
     fontSize: 16,
@@ -347,11 +576,32 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   customerTimestamp: {
-    color: '#FFFFFF',
+    color: 'rgba(255,255,255,0.7)',
   },
   doctorTimestamp: {
     color: theme.colors.textSecondary,
   },
+
+  // ─── Date separator ───────────────────────────────────────────────────────
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.divider,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    fontWeight: '500',
+    paddingHorizontal: theme.spacing.xs,
+  },
+
+  // ─── Product card ─────────────────────────────────────────────────────────
   productCard: {
     backgroundColor: theme.colors.warningBg,
     padding: theme.spacing.md,
@@ -399,6 +649,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: theme.colors.textOnPrimary,
   },
+
+  // ─── Scroll-to-bottom FAB ─────────────────────────────────────────────────
+  scrollFab: {
+    position: 'absolute',
+    right: theme.spacing.lg,
+    bottom: theme.spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadow.md,
+  },
+
+  // ─── Empty state ──────────────────────────────────────────────────────────
+  emptyState: {
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xxl,
+    paddingVertical: theme.spacing.huge,
+  },
+  emptyStateIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.primaryBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  emptyStateTitle: {
+    ...theme.typography.h4,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // ─── Consultation summary bar ─────────────────────────────────────────────
   consultationSummary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,6 +708,8 @@ const styles = StyleSheet.create({
     ...theme.typography.small,
     color: theme.colors.primaryDarker,
   },
+
+  // ─── Input bar ────────────────────────────────────────────────────────────
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',

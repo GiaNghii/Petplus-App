@@ -1,100 +1,215 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
+import { consultationService, messageService, productService } from '../../services/firestoreService';
+import { Product } from '../../data/products';
+import { Message } from '../../types';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Icon from '../../components/Icon';
 
-const PRODUCTS = [
-  { id: 'p1', name: 'Thuốc kháng sinh Amoxicillin 250mg', price: 200000 },
-  { id: 'p2', name: 'Thuốc bôi viêm da PetCare', price: 150000 },
-  { id: 'p3', name: 'Vitamin tổng hợp cho chó', price: 120000 },
-  { id: 'p4', name: 'Thuốc xổ giun', price: 45000 },
-];
+// ─── List item types ──────────────────────────────────────────────────────────
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'customer' | 'doctor';
-  productLink?: { id: string; name: string; price: number };
-  timestamp: Date;
+type DateSeparatorItem = { type: 'dateSeparator'; id: string; label: string };
+type ListItem = Message | DateSeparatorItem;
+
+function isMsgItem(item: ListItem): item is Message {
+  return !('type' in item && (item as DateSeparatorItem).type === 'dateSeparator');
 }
 
+function insertDateSeparators(messages: Message[]): ListItem[] {
+  if (!messages.length) return [];
+  const result: ListItem[] = [];
+  let lastKey = '';
+  const toKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const todayKey = toKey(new Date());
+  const yesterdayKey = toKey(new Date(Date.now() - 86400000));
+  for (const msg of messages) {
+    const d = new Date(msg.createdAt);
+    const key = toKey(d);
+    if (key !== lastKey) {
+      let label = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      if (key === todayKey) label = 'Hôm nay';
+      else if (key === yesterdayKey) label = 'Hôm qua';
+      result.push({ type: 'dateSeparator', id: `sep_${key}`, label });
+      lastKey = key;
+    }
+    result.push(msg);
+  }
+  return result;
+}
+
+function isLastInGroup(items: ListItem[], index: number): boolean {
+  const cur = items[index];
+  if (!isMsgItem(cur)) return false;
+  const next = items[index + 1];
+  if (!next || !isMsgItem(next)) return true;
+  return next.senderRole !== cur.senderRole;
+}
+
+// ─── Static demo data ─────────────────────────────────────────────────────────
+
+const STATIC_MESSAGES: Message[] = [
+  {
+    id: 'static_msg_1',
+    consultationId: 'static',
+    senderId: 'demo_user',
+    senderRole: 'customer',
+    text: 'Dạ chào bác sĩ, em muốn hỏi về tình trạng của Buddy ạ.',
+    createdAt: new Date(),
+    source: 'user',
+  },
+];
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
+
 export default function DoctorChatScreen({ route, navigation }: any) {
-  const { customerId, petName, customerName } = route.params;
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Dạ chào bác sĩ, em muốn hỏi về tình trạng của Buddy ạ.',
-      sender: 'customer',
-      timestamp: new Date(),
-    },
-  ]);
+  const { consultationId, petName, customerName } = route.params;
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<Message[]>(consultationId ? [] : STATIC_MESSAGES);
   const [inputText, setInputText] = useState('');
   const [showProductList, setShowProductList] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const flatListRef = useRef<FlatList>(null);
 
-  const sendMessage = () => {
-    if (!inputText.trim()) return;
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText,
-      sender: 'doctor',
-      timestamp: new Date(),
-    };
-    setMessages([...messages, newMessage]);
+  const listItems = useMemo(() => insertDateSeparators(messages), [messages]);
+
+  useEffect(() => {
+    loadChat();
+    loadProducts();
+  }, [consultationId]);
+
+  const loadChat = async () => {
+    if (!consultationId) return;
+
+    await consultationService.updateConsultationStatus(consultationId, 'active');
+    const result = await messageService.getMessagesByConsultation(consultationId);
+    if (result.success && result.messages) {
+      setMessages(result.messages);
+    }
+  };
+
+  const loadProducts = async () => {
+    const result = await productService.getProducts();
+    if (result.success && result.products) {
+      setProducts(result.products.filter((product: Product) => product.type === 'prescription').slice(0, 8));
+    }
+  };
+
+  const appendMessage = (message: Message) => {
+    setMessages(prev => [...prev, message]);
+  };
+
+  const createStoredMessage = async (data: Parameters<typeof messageService.createMessage>[0]) => {
+    if (!consultationId) {
+      const localMessage: Message = {
+        id: `local_${Date.now()}`,
+        consultationId: 'static',
+        senderId: data.senderId,
+        senderRole: data.senderRole,
+        text: data.text,
+        productLink: data.productLink,
+        imageUrl: data.imageUrl,
+        createdAt: new Date(),
+        source: data.source,
+      };
+      appendMessage(localMessage);
+      return localMessage;
+    }
+
+    const result = await messageService.createMessage(data);
+    if (result.success && result.message) {
+      appendMessage(result.message);
+      return result.message;
+    }
+    return null;
+  };
+
+  const sendMessage = async () => {
+    const text = inputText.trim();
+    if (!text) return;
+
+    await createStoredMessage({
+      consultationId: consultationId || 'static',
+      senderId: user?.id || 'demo_doctor',
+      senderRole: 'doctor',
+      text,
+      source: 'doctor',
+    });
     setInputText('');
   };
 
-  const sendPrescription = (product: typeof PRODUCTS[0]) => {
-    const newMessage: Message = {
-      id: Date.now().toString(),
+  const sendPrescription = async (product: Product) => {
+    await createStoredMessage({
+      consultationId: consultationId || 'static',
+      senderId: user?.id || 'demo_doctor',
+      senderRole: 'doctor',
       text: `Tôi kê đơn thuốc này cho ${petName}:`,
-      sender: 'doctor',
-      productLink: product,
-      timestamp: new Date(),
-    };
-    setMessages([...messages, newMessage]);
+      source: 'doctor',
+      productLink: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        description: product.description,
+      },
+    });
     setShowProductList(false);
     Alert.alert(
       'Đã gửi đơn thuốc',
-      `Đã gửi ${product.name} cho khách hàng. Họ có thể mua ngay trên app.`,
+      `Đã gửi ${product.name} cho khách hàng. Khách hàng có thể mua ngay trên app.`,
       [{ text: 'OK' }]
     );
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View style={[
-      styles.messageContainer,
-      item.sender === 'doctor' ? styles.doctorMessage : styles.customerMessage
-    ]}>
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
+    // Date separator
+    if (!isMsgItem(item)) {
+      return (
+        <View style={styles.dateSeparator}>
+          <View style={styles.dateSeparatorLine} />
+          <Text style={styles.dateSeparatorText}>{item.label}</Text>
+          <View style={styles.dateSeparatorLine} />
+        </View>
+      );
+    }
+
+    const isDoctor = item.senderRole === 'doctor';
+    const lastInGroup = isLastInGroup(listItems, index);
+
+    return (
       <View style={[
-        styles.messageBubble,
-        item.sender === 'doctor' ? styles.doctorBubble : styles.customerBubble
+        styles.messageContainer,
+        isDoctor ? styles.doctorMessage : styles.customerMessage,
+        !lastInGroup && styles.messageCompact,
       ]}>
-        <Text style={[
-          styles.messageText,
-          item.sender === 'doctor' ? styles.doctorText : styles.customerText
+        <View style={[
+          styles.messageBubble,
+          isDoctor ? styles.doctorBubble : styles.customerBubble,
+          lastInGroup && (isDoctor ? styles.doctorBubbleTail : styles.customerBubbleTail),
         ]}>
-          {item.text}
-        </Text>
-        {item.productLink && (
-          <View style={styles.productCard}>
-            <Icon name="medkit" size={32} color={theme.colors.primary} />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>{item.productLink.name}</Text>
-              <Text style={styles.productPrice}>
-                {item.productLink.price.toLocaleString('vi-VN')}đ
-              </Text>
-              <Text style={styles.prescriptionNote}>Đơn thuốc cho {petName}</Text>
+          <Text style={[styles.messageText, isDoctor ? styles.doctorText : styles.customerText]}>
+            {item.text}
+          </Text>
+          {item.productLink && (
+            <View style={styles.productCard}>
+              <Icon name="medkit" size={32} color={theme.colors.primary} />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.productLink.name}</Text>
+                <Text style={styles.productPrice}>
+                  {item.productLink.price.toLocaleString('vi-VN')}đ
+                </Text>
+                <Text style={styles.prescriptionNote}>Đơn thuốc cho {petName}</Text>
+              </View>
             </View>
-          </View>
-        )}
-        <Text style={styles.timestamp}>
-          {item.timestamp.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+          )}
+          <Text style={[styles.timestamp, isDoctor ? styles.doctorTimestamp : styles.customerTimestamp]}>
+            {item.createdAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -103,7 +218,7 @@ export default function DoctorChatScreen({ route, navigation }: any) {
         subtitle={`${petName} - Đang tư vấn`}
         onBack={() => navigation.goBack()}
         rightIcon="create"
-        onRightPress={() => {}}
+        onRightPress={() => setShowProductList(true)}
         variant="primary"
       />
 
@@ -111,63 +226,65 @@ export default function DoctorChatScreen({ route, navigation }: any) {
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-
-      <FlatList
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        style={styles.messagesList}
-      />
-
-      {showProductList && (
-        <View style={styles.productPanel}>
-          <View style={styles.productPanelHeader}>
-            <Text style={styles.productPanelTitle}>Chọn thuốc kê đơn</Text>
-            <TouchableOpacity onPress={() => setShowProductList(false)}>
-              <Icon name="close" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          {PRODUCTS.map((product) => (
-            <TouchableOpacity
-              key={product.id}
-              style={styles.productItem}
-              onPress={() => sendPrescription(product)}
-            >
-              <Icon name="medkit" size={24} color={theme.colors.primary} />
-              <View style={styles.productItemInfo}>
-                <Text style={styles.productItemName}>{product.name}</Text>
-                <Text style={styles.productItemPrice}>
-                  {product.price.toLocaleString('vi-VN')}đ
-                </Text>
-              </View>
-              <Icon name="send" size={24} color={theme.colors.primary} />
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      <View style={styles.inputContainer}>
-        <TouchableOpacity
-          style={styles.prescriptionBtn}
-          onPress={() => setShowProductList(!showProductList)}
-        >
-          <Icon name="medkit" size={20} color={theme.colors.primary} />
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập tin nhắn cho khách..."
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
+        <FlatList
+          ref={flatListRef}
+          data={listItems}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          style={styles.messagesList}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
-        <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={!inputText.trim()}
-        >
-          <Icon name="send" size={18} color={theme.colors.textOnPrimary} />
-        </TouchableOpacity>
-      </View>
+
+        {showProductList && (
+          <View style={styles.productPanel}>
+            <View style={styles.productPanelHeader}>
+              <Text style={styles.productPanelTitle}>Chọn thuốc kê đơn</Text>
+              <TouchableOpacity onPress={() => setShowProductList(false)}>
+                <Icon name="close" size={20} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {products.map((product) => (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.productItem}
+                onPress={() => sendPrescription(product)}
+              >
+                <Icon name="medkit" size={24} color={theme.colors.primary} />
+                <View style={styles.productItemInfo}>
+                  <Text style={styles.productItemName} numberOfLines={2}>{product.name}</Text>
+                  <Text style={styles.productItemPrice}>
+                    {product.price.toLocaleString('vi-VN')}đ
+                  </Text>
+                </View>
+                <Icon name="send" size={24} color={theme.colors.primary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={styles.prescriptionBtn}
+            onPress={() => setShowProductList(!showProductList)}
+          >
+            <Icon name="medkit" size={20} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="Nhập tin nhắn cho khách..."
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            onPress={sendMessage}
+            disabled={!inputText.trim()}
+          >
+            <Icon name="send" size={18} color={theme.colors.textOnPrimary} />
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -183,11 +300,18 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
+  },
+  messagesContent: {
     padding: theme.spacing.lg,
   },
+
+  // ─── Message containers ──────────────────────────────────────────────────
   messageContainer: {
     marginBottom: theme.spacing.md,
     maxWidth: '85%',
+  },
+  messageCompact: {
+    marginBottom: 3,
   },
   doctorMessage: {
     alignSelf: 'flex-end',
@@ -195,16 +319,22 @@ const styles = StyleSheet.create({
   customerMessage: {
     alignSelf: 'flex-start',
   },
+
+  // ─── Bubbles ─────────────────────────────────────────────────────────────
   messageBubble: {
     padding: theme.spacing.md,
     borderRadius: theme.radius.lg,
   },
   doctorBubble: {
     backgroundColor: theme.colors.primary,
+  },
+  doctorBubbleTail: {
     borderBottomRightRadius: 4,
   },
   customerBubble: {
     backgroundColor: theme.colors.surfaceAlt,
+  },
+  customerBubbleTail: {
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -222,6 +352,33 @@ const styles = StyleSheet.create({
     marginTop: 4,
     opacity: 0.7,
   },
+  doctorTimestamp: {
+    color: theme.colors.textOnPrimary,
+  },
+  customerTimestamp: {
+    color: theme.colors.textSecondary,
+  },
+
+  // ─── Date separator ───────────────────────────────────────────────────────
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.divider,
+  },
+  dateSeparatorText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    fontWeight: '500',
+    paddingHorizontal: theme.spacing.xs,
+  },
+
+  // ─── Prescription card ────────────────────────────────────────────────────
   productCard: {
     backgroundColor: theme.colors.warningBg,
     padding: theme.spacing.md,
@@ -250,11 +407,13 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     marginTop: 4,
   },
+
+  // ─── Product picker panel ─────────────────────────────────────────────────
   productPanel: {
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderLight,
-    maxHeight: 280,
+    maxHeight: 320,
   },
   productPanelHeader: {
     flexDirection: 'row',
@@ -273,6 +432,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
+    gap: theme.spacing.md,
   },
   productItemInfo: {
     flex: 1,
@@ -287,6 +447,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+
+  // ─── Input bar ────────────────────────────────────────────────────────────
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -298,7 +460,7 @@ const styles = StyleSheet.create({
   prescriptionBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
@@ -306,7 +468,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 20,
+    borderRadius: theme.radius.lg,
     padding: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     fontSize: 16,
@@ -316,7 +478,7 @@ const styles = StyleSheet.create({
   sendButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',

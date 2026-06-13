@@ -1,62 +1,112 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
+import { consultationService, messageService } from '../../services/firestoreService';
+import { Consultation, Message } from '../../types';
 import { theme } from '../../utils/theme';
 import Header from '../../components/Header';
 import Icon from '../../components/Icon';
 
-const CHATS = [
+const STATIC_CHATS = [
   {
-    id: '1',
-    pet: 'Buddy',
-    customer: 'Nguyễn Văn C',
-    status: 'waiting',
+    id: 'static_1',
+    petName: 'Buddy',
+    customerName: 'Nguyễn Văn C',
+    status: 'waiting' as const,
     lastMessage: 'Khách hàng đang nhập tin nhắn...',
     time: 'Vừa xong',
     breed: 'Poodle | 3 tuổi | 5kg',
     unread: true,
   },
   {
-    id: '2',
-    pet: 'Mèo',
-    customer: 'Trần Thị D',
-    status: 'active',
+    id: 'static_2',
+    petName: 'Mèo',
+    customerName: 'Trần Thị D',
+    status: 'active' as const,
     lastMessage: 'Mèo em bỏ ăn 2 ngày rồi...',
     time: '2 phút trước',
     breed: 'Anh lông dài | 2 tuổi | 3kg',
     unread: true,
   },
-  {
-    id: '3',
-    pet: 'Brown',
-    customer: 'Lê Văn E',
-    status: 'active',
-    lastMessage: 'Cảm ơn bác sĩ ạ!',
-    time: '15 phút trước',
-    breed: 'Husky | 4 tuổi | 22kg',
-    unread: false,
-  },
-  {
-    id: '4',
-    pet: 'Mèo Mun',
-    customer: 'Phạm Thị F',
-    status: 'waiting',
-    lastMessage: '[Hình ảnh]',
-    time: '30 phút trước',
-    breed: 'Mèo Ba Tư | 5 tuổi | 4kg',
-    unread: true,
-  },
 ];
 
+interface ChatRow {
+  id: string;
+  consultationId?: string;
+  petName: string;
+  customerName: string;
+  status: Consultation['status'];
+  lastMessage: string;
+  time: string;
+  breed: string;
+  unread: boolean;
+}
+
+function formatRelativeTime(date: Date): string {
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (diffMinutes < 1) return 'Vừa xong';
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  return `${diffHours} giờ trước`;
+}
+
 export default function DoctorChatListScreen({ navigation }: any) {
-  const renderChat = ({ item }: any) => (
+  const { user } = useAuth();
+  const [rows, setRows] = useState<ChatRow[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener?.('focus', loadChats);
+    loadChats();
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadChats = async () => {
+    const result = await consultationService.getConsultationsByDoctor(user?.id || 'demo_doctor');
+    const consultations = result.success && result.consultations ? result.consultations : [];
+
+    const dynamicRows = await Promise.all(consultations.map(async (consultation: Consultation) => {
+      const messageResult = await messageService.getMessagesByConsultation(consultation.id);
+      const consultationMessages = messageResult.success && messageResult.messages ? messageResult.messages : [];
+      const lastMessage = consultationMessages[consultationMessages.length - 1] as Message | undefined;
+
+      return {
+        id: consultation.id,
+        consultationId: consultation.id,
+        petName: consultation.petName || 'Thú cưng',
+        customerName: consultation.customerName || 'Khách hàng',
+        status: consultation.status,
+        lastMessage: lastMessage?.productLink ? 'Bác sĩ đã gửi đơn thuốc' : (lastMessage?.text || 'Chưa có tin nhắn'),
+        time: formatRelativeTime(consultation.updatedAt),
+        breed: 'Hồ sơ tư vấn online',
+        unread: consultation.status === 'waiting' || lastMessage?.senderRole === 'customer',
+      } satisfies ChatRow;
+    }));
+
+    setRows([...dynamicRows, ...STATIC_CHATS]);
+  };
+
+  const openChat = async (item: ChatRow) => {
+    if (item.consultationId && item.status === 'waiting') {
+      await consultationService.updateConsultationStatus(item.consultationId, 'active');
+    }
+
+    navigation.navigate('DoctorChat', {
+      consultationId: item.consultationId,
+      customerId: item.id,
+      petName: item.petName,
+      customerName: item.customerName,
+    });
+  };
+
+  const waitingCount = rows.filter(item => item.status === 'waiting').length;
+  const activeCount = rows.filter(item => item.status === 'active').length;
+
+  const renderChat = ({ item }: { item: ChatRow }) => (
     <TouchableOpacity
       style={styles.chatCard}
-      onPress={() => navigation.navigate('DoctorChat', { 
-        customerId: item.id, 
-        petName: item.pet, 
-        customerName: item.customer 
-      })}
+      onPress={() => openChat(item)}
     >
       <View style={styles.petAvatar}>
         <Icon name="paw" size={24} color={theme.colors.warning} />
@@ -64,13 +114,13 @@ export default function DoctorChatListScreen({ navigation }: any) {
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
-          <Text style={styles.customer}>{item.customer}</Text>
+          <Text style={styles.customer}>{item.customerName}</Text>
           <Text style={styles.time}>{item.time}</Text>
         </View>
         <View style={styles.petInfoRow}>
           <Icon name="paw" size={12} color={theme.colors.textSecondary} />
           <Text style={styles.petInfo}>
-            {item.pet} - {item.breed}
+            {item.petName} - {item.breed}
           </Text>
         </View>
         <Text style={styles.lastMessage} numberOfLines={1}>
@@ -82,11 +132,11 @@ export default function DoctorChatListScreen({ navigation }: any) {
             { backgroundColor: item.status === 'waiting' ? theme.colors.warning : theme.colors.primary }
           ]}>
             <Text style={styles.statusText}>
-              {item.status === 'waiting' ? 'Chờ tư vấn' : 'Đang chat'}
+              {item.status === 'waiting' ? 'Chờ tư vấn' : 'Đang tư vấn'}
             </Text>
           </View>
           {item.status === 'waiting' && (
-            <TouchableOpacity style={styles.acceptButton}>
+            <TouchableOpacity style={styles.acceptButton} onPress={() => openChat(item)}>
               <Text style={styles.acceptButtonText}>Nhận tư vấn</Text>
               <Icon name="arrow-forward" size={12} color={theme.colors.textOnPrimary} />
             </TouchableOpacity>
@@ -100,12 +150,12 @@ export default function DoctorChatListScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Header
         title="Tư vấn online"
-        subtitle="4 chờ • 2 đang chat"
+        subtitle={`${waitingCount} chờ • ${activeCount} đang tư vấn`}
         onBack={() => navigation.goBack()}
       />
 
       <FlatList
-        data={CHATS}
+        data={rows}
         renderItem={renderChat}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}

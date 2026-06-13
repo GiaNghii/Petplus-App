@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pet, Order, Appointment } from '../types';
+import { Pet, Order, Appointment, Consultation, Message, MessageProductLink } from '../types';
 import { DEMO_APPOINTMENTS, DEMO_ORDERS, DEMO_PETS, DEMO_USER } from '../data/demoData';
 
 // Mock data storage using AsyncStorage (works offline, no Firestore needed)
@@ -9,6 +9,8 @@ const STORAGE_KEYS = {
   PETS: 'mock_pets',
   ORDERS: 'mock_orders',
   APPOINTMENTS: 'mock_appointments_v2',
+  CONSULTATIONS: 'mock_consultations_v1',
+  MESSAGES: 'mock_messages_v1',
   CART: 'mock_cart',
 };
 
@@ -21,6 +23,8 @@ export async function resetDemoData() {
     [STORAGE_KEYS.PETS, JSON.stringify(SEED_PETS)],
     [STORAGE_KEYS.ORDERS, JSON.stringify(SEED_ORDERS)],
     [STORAGE_KEYS.APPOINTMENTS, JSON.stringify(SEED_APPOINTMENTS)],
+    [STORAGE_KEYS.CONSULTATIONS, JSON.stringify([])],
+    [STORAGE_KEYS.MESSAGES, JSON.stringify([])],
   ]);
   await AsyncStorage.removeItem(STORAGE_KEYS.CART);
 }
@@ -59,6 +63,27 @@ async function saveData<T>(key: string, data: T[]): Promise<void> {
   } catch (e) {
     console.error('Save error:', e);
   }
+}
+
+function reviveDate(value: unknown): Date {
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return new Date();
+}
+
+function hydrateConsultation(item: Consultation): Consultation {
+  return {
+    ...item,
+    createdAt: reviveDate(item.createdAt),
+    updatedAt: reviveDate(item.updatedAt),
+  };
+}
+
+function hydrateMessage(item: Message): Message {
+  return {
+    ...item,
+    createdAt: reviveDate(item.createdAt),
+  };
 }
 
 export const mockPetService = {
@@ -191,6 +216,151 @@ export const mockOrderService = {
   async getOrdersByCustomer(customerId: string) {
     const orders = await getData<Order>(STORAGE_KEYS.ORDERS, SEED_ORDERS);
     return { success: true, orders: orders.filter(o => o.customerId === customerId || customerId === DEMO_USER.id) };
+  },
+};
+
+export const mockConsultationService = {
+  async getOrCreateConsultation(data: {
+    customerId: string;
+    doctorId: string;
+    petId: string;
+    petName?: string;
+    customerName?: string;
+    doctorName?: string;
+  }) {
+    const consultations = (await getData<Consultation>(STORAGE_KEYS.CONSULTATIONS, [])).map(hydrateConsultation);
+    const existing = consultations.find(c =>
+      c.customerId === data.customerId &&
+      c.doctorId === data.doctorId &&
+      c.petId === data.petId &&
+      c.status !== 'closed'
+    );
+
+    if (existing) {
+      return { success: true, consultation: existing };
+    }
+
+    const now = new Date();
+    const consultation: Consultation = {
+      id: `consult_${Date.now()}`,
+      customerId: data.customerId,
+      doctorId: data.doctorId,
+      petId: data.petId,
+      petName: data.petName,
+      customerName: data.customerName,
+      doctorName: data.doctorName,
+      status: 'waiting',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    consultations.unshift(consultation);
+    await saveData(STORAGE_KEYS.CONSULTATIONS, consultations);
+    return { success: true, consultation };
+  },
+
+  async getConsultationsByDoctor(doctorId: string) {
+    const consultations = (await getData<Consultation>(STORAGE_KEYS.CONSULTATIONS, [])).map(hydrateConsultation);
+    return {
+      success: true,
+      consultations: consultations
+        .filter(c => c.doctorId === doctorId || doctorId === 'demo_doctor')
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+    };
+  },
+
+  async getConsultation(consultationId: string) {
+    const consultations = (await getData<Consultation>(STORAGE_KEYS.CONSULTATIONS, [])).map(hydrateConsultation);
+    const consultation = consultations.find(c => c.id === consultationId);
+    if (!consultation) return { success: false, error: 'Not found' };
+    return { success: true, consultation };
+  },
+
+  async updateConsultationStatus(consultationId: string, status: Consultation['status']) {
+    const consultations = (await getData<Consultation>(STORAGE_KEYS.CONSULTATIONS, [])).map(hydrateConsultation);
+    const index = consultations.findIndex(c => c.id === consultationId);
+    if (index < 0) return { success: false, error: 'Not found' };
+
+    consultations[index] = {
+      ...consultations[index],
+      status,
+      updatedAt: new Date(),
+    };
+    await saveData(STORAGE_KEYS.CONSULTATIONS, consultations);
+    return { success: true, consultation: consultations[index] };
+  },
+
+  async touchConsultation(consultationId: string) {
+    const consultations = (await getData<Consultation>(STORAGE_KEYS.CONSULTATIONS, [])).map(hydrateConsultation);
+    const index = consultations.findIndex(c => c.id === consultationId);
+    if (index < 0) return { success: false, error: 'Not found' };
+
+    consultations[index] = {
+      ...consultations[index],
+      updatedAt: new Date(),
+    };
+    await saveData(STORAGE_KEYS.CONSULTATIONS, consultations);
+    return { success: true, consultation: consultations[index] };
+  },
+};
+
+export const mockMessageService = {
+  async getMessagesByConsultation(consultationId: string) {
+    const messages = (await getData<Message>(STORAGE_KEYS.MESSAGES, [])).map(hydrateMessage);
+    return {
+      success: true,
+      messages: messages
+        .filter(m => m.consultationId === consultationId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+    };
+  },
+
+  async createMessage(data: {
+    consultationId: string;
+    senderId: string;
+    senderRole: Message['senderRole'];
+    text: string;
+    productLink?: MessageProductLink;
+    imageUrl?: string;
+    source?: Message['source'];
+  }) {
+    const messages = (await getData<Message>(STORAGE_KEYS.MESSAGES, [])).map(hydrateMessage);
+    const message: Message = {
+      id: `msg_${Date.now()}_${messages.length}`,
+      consultationId: data.consultationId,
+      senderId: data.senderId,
+      senderRole: data.senderRole,
+      text: data.text,
+      productLink: data.productLink,
+      imageUrl: data.imageUrl,
+      source: data.source,
+      createdAt: new Date(),
+    };
+
+    messages.push(message);
+    await saveData(STORAGE_KEYS.MESSAGES, messages);
+    await mockConsultationService.touchConsultation(data.consultationId);
+    return { success: true, message };
+  },
+
+  async ensureWelcomeMessage(data: {
+    consultationId: string;
+    doctorId: string;
+    doctorName: string;
+    petName: string;
+  }) {
+    const existing = await this.getMessagesByConsultation(data.consultationId);
+    if (existing.success && existing.messages && existing.messages.length > 0) {
+      return { success: true, message: existing.messages[0] };
+    }
+
+    return this.createMessage({
+      consultationId: data.consultationId,
+      senderId: data.doctorId,
+      senderRole: 'doctor',
+      text: `Dạ chào anh/chị, em là bác sĩ ${data.doctorName}. Anh/chị cần tư vấn về ${data.petName} ạ?`,
+      source: 'doctor',
+    });
   },
 };
 
