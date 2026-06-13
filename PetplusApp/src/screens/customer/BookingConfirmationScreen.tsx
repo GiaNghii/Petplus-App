@@ -9,6 +9,7 @@ import Header from '../../components/Header';
 import Button from '../../components/Button';
 import ModernCard from '../../components/ModernCard';
 import Icon from '../../components/Icon';
+import StepProgress from '../../components/StepProgress';
 import { DOCTOR_NAMES } from '../../data/doctors';
 
 const BRANCHES: Record<string, string> = {
@@ -102,6 +103,7 @@ export default function BookingConfirmationScreen({ route, navigation }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.headerInfo}>
           <Text style={styles.stepText}>Bước 4 / 4</Text>
+          <StepProgress current={4} total={4} />
           <Text style={styles.title}>Kiểm tra thông tin</Text>
           <Text style={styles.subtitle}>Vui lòng kiểm tra kỹ trước khi xác nhận</Text>
         </View>
