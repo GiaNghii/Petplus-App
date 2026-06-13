@@ -53,7 +53,7 @@ export default function ShopScreen({ navigation }: any) {
             {
               text: 'Xác nhận',
               onPress: () => {
-                addItem(product, pet.id, { source: 'shop' });
+                addItem(product, pet.id, { source: 'shop', petName: pet.name });
                 Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
               },
             },

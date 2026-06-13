@@ -176,7 +176,9 @@ export default function CartScreen({ navigation }: any) {
                   {item.selectedPetId && (
                     <View style={styles.petTag}>
                       <Icon name="paw" size={10} color={theme.colors.primaryDarker} />
-                      <Text style={styles.petTagText}>Kê đơn cho pet</Text>
+                      <Text style={styles.petTagText}>
+                        Kê đơn cho: {item.selectedPetName || 'pet'}
+                      </Text>
                     </View>
                   )}
                 </View>

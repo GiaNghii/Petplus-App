@@ -29,6 +29,7 @@ export default function ProductDetailScreen({ route, navigation }: any) {
     productPrice,
     productDescription,
     petId,
+    petName,
     conditionId,
     source,
     productType,
@@ -91,21 +92,21 @@ export default function ProductDetailScreen({ route, navigation }: any) {
           {
             text: 'Xác nhận',
             onPress: () => {
-              addItem(product, petId, { conditionId, source: source || 'shop' });
+              addItem(product, petId, { conditionId, source: source || 'shop', petName });
               Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
             },
           },
         ]
       );
     } else {
-      addItem(product, petId, { conditionId, source: source || 'shop' });
+      addItem(product, petId, { conditionId, source: source || 'shop', petName });
       Alert.alert('Đã thêm', `${product.name} đã được thêm vào giỏ`);
     }
   };
 
   const handleBuyNow = () => {
     if (quantity === 0) {
-      addItem(product, petId, { conditionId, source: source || 'shop' });
+      addItem(product, petId, { conditionId, source: source || 'shop', petName });
     }
     navigation.navigate('Cart');
   };
